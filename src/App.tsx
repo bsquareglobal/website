@@ -199,9 +199,9 @@ const createArchitecturalFallback = (label: string) => {
 
 const INITIAL_CONTENT: SiteContent = {
   heroBadge: 'INDIA & UAE • SMART THEATRE • HOME THEATRE • 3D THEATRE',
-  heroHeadline: 'Transforming Spaces. Creating Experiences.',
+  heroHeadline: 'One Space. Endless Possibilities.',
   heroSubheadline:
-    'Innovative Smart Theatre, Home Theatre and Integrated Technology Solutions for Education, Entertainment and Modern Living.',
+    'An Innovative Multipurpose Room for Seminars, Conferences, Education, and Cinema.',
   introHeading: 'Technology That Transforms Experiences.',
   introText:
     'With a head office in the UAE and a dedicated development and engineering centre based in India, BSquare Global is a premier technology innovator pioneering smart environments for educational institutions, residential spaces, and corporate enterprises.',
