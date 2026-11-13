@@ -199,9 +199,9 @@ const createArchitecturalFallback = (label: string) => {
 
 const INITIAL_CONTENT: SiteContent = {
   heroBadge: 'INDIA & UAE • SMART THEATRE • HOME THEATRE • 3D THEATRE',
-  heroHeadline: 'One Space. Endless Possibilities.',
+  heroHeadline: 'Transforming Spaces. Creating Experiences.',
   heroSubheadline:
-    'An Innovative Multipurpose Room for Seminars, Conferences, Education, and Cinema.',
+    'Innovative Smart Theatre, Home Theatre and Integrated Technology Solutions for Education, Entertainment and Modern Living.',
   introHeading: 'Technology That Transforms Experiences.',
   introText:
     'With a head office in the UAE and a dedicated development and engineering centre based in India, BSquare Global is a premier technology innovator pioneering smart environments for educational institutions, residential spaces, and corporate enterprises.',
@@ -897,6 +897,30 @@ export default function App() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Lock background body scroll when any modal is open so a second scrollbar never appears
+  useEffect(() => {
+    const anyModalOpen =
+      selectedProject !== null ||
+      lightboxIndex !== null ||
+      videoModalOpen ||
+      searchModalOpen ||
+      deleteConfirmTarget !== null;
+    if (anyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [
+    selectedProject,
+    lightboxIndex,
+    videoModalOpen,
+    searchModalOpen,
+    deleteConfirmTarget,
+  ]);
 
   // Navigate helper
   const navigateTo = (page: PageRoute, prefillService?: string) => {
@@ -4000,29 +4024,29 @@ export default function App() {
       </a>
 
       {/* =====================================================================
-          MODAL 1: PROJECT DETAIL EXPANDED VIEW / MODAL (NO CATEGORIES)
+          MODAL 1: PROJECT DETAIL EXPANDED VIEW / MODAL (FULL DESKTOP WIDTH, SINGLE SCROLLBAR, TOP VIDEO CTA)
       ===================================================================== */}
       {selectedProject && (
         <div
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md overflow-y-auto p-2 sm:p-5 lg:p-8"
           onClick={() => setSelectedProject(null)}
         >
           <div
-            className="relative w-full max-w-4xl rounded-[28px] bg-[#191C1D] border-2 border-[#ba8a40]/70 p-6 sm:p-8 my-8 max-h-[90vh] overflow-y-auto"
+            className="relative w-full max-w-[96vw] 2xl:max-w-[1480px] mx-auto rounded-[28px] bg-[#191C1D] border-2 border-[#ba8a40]/70 p-5 sm:p-8 lg:p-10 my-2 sm:my-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={() => setSelectedProject(null)}
               aria-label="Close Project Detail"
-              className="absolute top-5 right-5 z-10 w-10 h-10 rounded-full bg-[#111314] border border-[#2A2E30] hover:border-[#ba8a40] text-white flex items-center justify-center"
+              className="absolute top-6 right-6 z-20 w-11 h-11 rounded-full bg-[#111314]/90 border border-[#2A2E30] hover:border-[#ba8a40] text-white flex items-center justify-center transition-colors shadow-lg"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="space-y-6">
-              {/* Main Selected Image */}
-              <div className="relative h-72 sm:h-96 rounded-2xl overflow-hidden bg-[#111314] border border-[#2A2E30]">
+              {/* Main Selected Image (16:9 Widescreen Ratio Matching Reference2 + Left/Right Side Arrow Buttons) */}
+              <div className="relative w-full aspect-[16/9] max-h-[76vh] rounded-2xl overflow-hidden bg-[#111314] border border-[#2A2E30]">
                 <SafeImage
                   src={
                     selectedProject.images[projectModalImageIdx] ||
@@ -4031,50 +4055,76 @@ export default function App() {
                   alt={selectedProject.title}
                   className="w-full h-full object-cover"
                 />
+
+                {selectedProject.images.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProjectModalImageIdx(
+                          (projectModalImageIdx - 1 + selectedProject.images.length) %
+                            selectedProject.images.length
+                        )
+                      }
+                      aria-label="Previous Project Image"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#111314]/85 hover:bg-[#ba8a40] border border-[#ba8a40]/60 text-white hover:text-[#111314] flex items-center justify-center transition-all shadow-xl"
+                    >
+                      <ChevronLeft className="w-6 h-6" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProjectModalImageIdx(
+                          (projectModalImageIdx + 1) % selectedProject.images.length
+                        )
+                      }
+                      aria-label="Next Project Image"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#111314]/85 hover:bg-[#ba8a40] border border-[#ba8a40]/60 text-white hover:text-[#111314] flex items-center justify-center transition-all shadow-xl"
+                    >
+                      <ChevronRight className="w-6 h-6" />
+                    </button>
+                  </>
+                )}
               </div>
 
-              {/* Multiple Photographs Switcher */}
-              {selectedProject.images.length > 1 && (
-                <div className="flex items-center gap-3 overflow-x-auto pb-1">
-                  {selectedProject.images.map((img, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setProjectModalImageIdx(i)}
-                      className={`w-24 h-16 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${
-                        projectModalImageIdx === i
-                          ? 'border-[#ba8a40] scale-105'
-                          : 'border-transparent opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      <SafeImage
-                        src={img}
-                        alt={`${selectedProject.title} photo ${i + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Project Metadata & Description */}
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center gap-4 text-xs text-[#ba8a40] font-semibold">
+              {/* Project Metadata, Title & Watch Project Video Button Row (Matching Reference2) */}
+              <div className="space-y-4 pt-1">
+                <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-[#ba8a40] font-semibold">
                   <span className="inline-flex items-center gap-1.5">
                     <MapPin className="w-4 h-4" />
                     <span>{selectedProject.location}</span>
                   </span>
                 </div>
 
-                <h2 className="font-obry-display text-2xl sm:text-3xl font-extrabold text-white">
-                  {selectedProject.title}
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <h2 className="font-obry-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white">
+                    {selectedProject.title}
+                  </h2>
 
-                <div className="p-4 rounded-2xl bg-[#151819] border border-[#2A2E30]">
+                  {selectedProject.videoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedProject(null);
+                        setActiveVideoUrl(
+                          `https://www.youtube.com/embed/${siteContent.youtubeShowcaseId}?autoplay=1`
+                        );
+                        setVideoModalOpen(true);
+                      }}
+                      className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-full bg-[#151819] hover:bg-[#ba8a40] border border-[#ba8a40] text-white hover:text-[#111314] font-obry-display text-xs font-extrabold uppercase tracking-wider transition-all group shadow-lg shrink-0"
+                    >
+                      <Play className="w-4 h-4 text-[#ba8a40] group-hover:text-[#111314] fill-current transition-colors" />
+                      <span>Watch Project Video</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="p-5 rounded-2xl bg-[#151819] border border-[#2A2E30]">
                   <div className="text-xs font-bold uppercase tracking-wider text-[#ba8a40] mb-1">
                     Project Overview
                   </div>
-                  <p className="text-sm text-white/90 leading-relaxed">
+                  <p className="text-sm sm:text-base text-white/90 leading-relaxed">
                     {selectedProject.overview}
                   </p>
                 </div>
@@ -4100,38 +4150,19 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Video Link & Action CTA */}
+                {/* Action CTA */}
                 <div className="pt-6 border-t border-[#2A2E30] flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedProject(null);
-                        navigateTo('contact', 'Smart Theatre');
-                      }}
-                      className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase tracking-wider"
-                    >
-                      <span>Enquire About This Project</span>
-                      <ArrowUpRight className="w-4 h-4" />
-                    </button>
-
-                    {selectedProject.videoUrl && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedProject(null);
-                          setActiveVideoUrl(
-                            `https://www.youtube.com/embed/${siteContent.youtubeShowcaseId}?autoplay=1`
-                          );
-                          setVideoModalOpen(true);
-                        }}
-                        className="inline-flex items-center gap-2 px-5 py-3.5 rounded-full bg-[#151819] border border-[#ba8a40] text-white font-obry-display text-xs font-bold uppercase tracking-wider"
-                      >
-                        <Play className="w-4 h-4 text-[#ba8a40] fill-current" />
-                        <span>Watch Project Video</span>
-                      </button>
-                    )}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProject(null);
+                      navigateTo('contact', 'Smart Theatre');
+                    }}
+                    className="inline-flex items-center gap-2 px-7 py-4 rounded-full bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase tracking-wider hover:opacity-95 transition-opacity"
+                  >
+                    <span>Enquire About This Project</span>
+                    <ArrowUpRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>
