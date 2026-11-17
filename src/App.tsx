@@ -93,7 +93,48 @@ interface GalleryItem {
   order: number;
 }
 
+interface ExtraSocialLink {
+  id: string;
+  platform: string;
+  url: string;
+}
+
+interface CompanyAddressEntry {
+  id: string;
+  label: string;
+  cityTitle: string;
+  address: string;
+  phone: string;
+}
+
+interface AppearanceSettings {
+  headingFont: string;
+  bodyFont: string;
+  headingColor: string;
+  bodyTextColor: string;
+  primaryColor: string;
+  secondaryColor: string;
+  buttonColor: string;
+  buttonTextColor: string;
+  backgroundColor: string;
+}
+
+interface InstagramReelItem {
+  id: string;
+  title: string;
+  reelUrl: string;
+  thumbnailUrl: string;
+  order: number;
+  enabled: boolean;
+}
+
 interface SiteContent {
+  companyName?: string;
+  companyLogo?: string;
+  whatsappDirectLink?: string;
+  otherSocialLinks?: ExtraSocialLink[];
+  extraAddresses?: CompanyAddressEntry[];
+  singleAddressMode?: boolean;
   heroBadge: string;
   heroHeadline: string;
   heroSubheadline: string;
@@ -197,7 +238,68 @@ const createArchitecturalFallback = (label: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 };
 
+const DEFAULT_APPEARANCE: AppearanceSettings = {
+  headingFont: 'Unbounded',
+  bodyFont: 'Plus Jakarta Sans',
+  headingColor: '#FFFFFF',
+  bodyTextColor: '#A1A1A1',
+  primaryColor: '#ba8a40',
+  secondaryColor: '#191C1D',
+  buttonColor: '#ba8a40',
+  buttonTextColor: '#111314',
+  backgroundColor: '#151819',
+};
+
+const INITIAL_REELS: InstagramReelItem[] = [
+  {
+    id: 'reel-1',
+    title: 'Next-Gen Smart Theatre Classroom Transformation',
+    reelUrl: 'https://www.instagram.com/bsquareglobal/reels/',
+    thumbnailUrl: BSQUARE_IMAGES.edu01,
+    order: 1,
+    enabled: true,
+  },
+  {
+    id: 'reel-2',
+    title: 'Dolby Atmos Luxury Home Cinema Walkthrough',
+    reelUrl: 'https://www.instagram.com/bsquareglobal/reels/',
+    thumbnailUrl: BSQUARE_IMAGES.theatre003,
+    order: 2,
+    enabled: true,
+  },
+  {
+    id: 'reel-3',
+    title: 'Architectural Acoustic Wall Panels & Starlight Ceiling',
+    reelUrl: 'https://www.instagram.com/bsquareglobal/reels/',
+    thumbnailUrl: BSQUARE_IMAGES.theatre006A,
+    order: 3,
+    enabled: true,
+  },
+  {
+    id: 'reel-4',
+    title: 'Immersive 3D & Institutional Auditorium Setup',
+    reelUrl: 'https://www.instagram.com/bsquareglobal/reels/',
+    thumbnailUrl: BSQUARE_IMAGES.edu03,
+    order: 4,
+    enabled: true,
+  },
+  {
+    id: 'reel-5',
+    title: 'Bespoke Recliner Seating & 4K Laser Projection',
+    reelUrl: 'https://www.instagram.com/bsquareglobal/reels/',
+    thumbnailUrl: BSQUARE_IMAGES.theatre009,
+    order: 5,
+    enabled: true,
+  },
+];
+
 const INITIAL_CONTENT: SiteContent = {
+  companyName: 'BSquare Global',
+  companyLogo: BSQUARE_IMAGES.logo,
+  whatsappDirectLink: 'https://wa.me/919744714449',
+  otherSocialLinks: [],
+  extraAddresses: [],
+  singleAddressMode: false,
   heroBadge: 'INDIA & UAE • SMART THEATRE • HOME THEATRE • 3D THEATRE',
   heroHeadline: 'Transforming Spaces. Creating Experiences.',
   heroSubheadline:
@@ -804,8 +906,20 @@ export default function App() {
   const [enquiries, setEnquiries] = useState<EnquirySubmission[]>(() =>
     loadFromStorage('bsquare_enquiries_v2', [])
   );
+  const [appearance, setAppearance] = useState<AppearanceSettings>(() =>
+    loadFromStorage('bsquare_appearance_v1', DEFAULT_APPEARANCE)
+  );
+  const [draftAppearance, setDraftAppearance] = useState<AppearanceSettings>(() =>
+    loadFromStorage('bsquare_appearance_v1', DEFAULT_APPEARANCE)
+  );
+  const [livePreviewAppearance, setLivePreviewAppearance] = useState<boolean>(true);
+  const [reels, setReels] = useState<InstagramReelItem[]>(() =>
+    loadFromStorage('bsquare_reels_v1', INITIAL_REELS)
+  );
+  const [activeReelModal, setActiveReelModal] = useState<InstagramReelItem | null>(null);
+  const reelsScrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Save state changes
+  // Save state changes to localStorage & optional Supabase backend
   useEffect(() => {
     saveToStorage('bsquare_site_content_v2', siteContent);
   }, [siteContent]);
@@ -824,6 +938,12 @@ export default function App() {
   useEffect(() => {
     saveToStorage('bsquare_enquiries_v2', enquiries);
   }, [enquiries]);
+  useEffect(() => {
+    saveToStorage('bsquare_appearance_v1', appearance);
+  }, [appearance]);
+  useEffect(() => {
+    saveToStorage('bsquare_reels_v1', reels);
+  }, [reels]);
 
   // Interactive Homepage States
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
@@ -867,16 +987,36 @@ export default function App() {
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [adminLoginError, setAdminLoginError] = useState('');
   const [adminTab, setAdminTab] = useState<
-    'projects' | 'gallery' | 'content' | 'enquiries'
+    | 'projects'
+    | 'gallery'
+    | 'content'
+    | 'company'
+    | 'appearance'
+    | 'reels'
+    | 'enquiries'
   >('projects');
   const [adminToast, setAdminToast] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<ProjectItem | null>(null);
   const [newProjectImageInput, setNewProjectImageInput] = useState('');
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{
-    type: 'project' | 'gallery';
+    type: 'project' | 'gallery' | 'reel';
     id: string;
     title: string;
   } | null>(null);
+  const [newReelForm, setNewReelForm] = useState({
+    title: '',
+    reelUrl: '',
+    thumbnailUrl: '',
+  });
+  const [isFetchingReelThumb, setIsFetchingReelThumb] = useState(false);
+  const [newSocialPlatform, setNewSocialPlatform] = useState('');
+  const [newSocialUrl, setNewSocialUrl] = useState('');
+  const [newAddressForm, setNewAddressForm] = useState({
+    label: '',
+    cityTitle: '',
+    address: '',
+    phone: '',
+  });
   const [newGalleryForm, setNewGalleryForm] = useState<{
     title: string;
     caption: string;
@@ -905,7 +1045,8 @@ export default function App() {
       lightboxIndex !== null ||
       videoModalOpen ||
       searchModalOpen ||
-      deleteConfirmTarget !== null;
+      deleteConfirmTarget !== null ||
+      activeReelModal !== null;
     if (anyModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -920,6 +1061,7 @@ export default function App() {
     videoModalOpen,
     searchModalOpen,
     deleteConfirmTarget,
+    activeReelModal,
   ]);
 
   // Navigate helper
@@ -1035,12 +1177,116 @@ export default function App() {
     setSubmittedEnquiry(newRecord);
   };
 
-  // Build WhatsApp URL with prefilled message
+  const activeCompanyName = siteContent.companyName?.trim() || 'BSquare Global';
+  const activeLogo = siteContent.companyLogo?.trim() || BSQUARE_IMAGES.logo;
+  const activeTheme = livePreviewAppearance ? draftAppearance : appearance;
+
+  // Compute deduplicated active company addresses (Address Display Rule: if only 1 address exists, show it only once)
+  const activeAddresses = useMemo<CompanyAddressEntry[]>(() => {
+    const list: CompanyAddressEntry[] = [];
+    if (siteContent.indiaAddress && siteContent.indiaAddress.trim()) {
+      list.push({
+        id: 'primary-india',
+        label: 'INDIA OFFICE',
+        cityTitle: 'Trivandrum, Kerala, India',
+        address: siteContent.indiaAddress.trim(),
+        phone: siteContent.phoneIndia,
+      });
+    }
+    if (
+      !siteContent.singleAddressMode &&
+      siteContent.uaeAddress &&
+      siteContent.uaeAddress.trim() &&
+      siteContent.uaeAddress.trim().toLowerCase() !==
+        (siteContent.indiaAddress || '').trim().toLowerCase()
+    ) {
+      list.push({
+        id: 'secondary-uae',
+        label: 'UAE HEAD OFFICE',
+        cityTitle: 'Ajman, United Arab Emirates',
+        address: siteContent.uaeAddress.trim(),
+        phone: `${siteContent.phoneUae}${
+          siteContent.phoneUaeSecondary ? ` / ${siteContent.phoneUaeSecondary}` : ''
+        }`,
+      });
+    }
+    if (!siteContent.singleAddressMode && siteContent.extraAddresses?.length) {
+      siteContent.extraAddresses.forEach((addr) => {
+        if (
+          addr.address.trim() &&
+          !list.some(
+            (existing) =>
+              existing.address.toLowerCase() === addr.address.trim().toLowerCase()
+          )
+        ) {
+          list.push(addr);
+        }
+      });
+    }
+    return list;
+  }, [siteContent]);
+
+  // Sorted & Enabled Instagram Reels for Homepage
+  const sortedReels = useMemo(() => {
+    return [...reels].sort((a, b) => a.order - b.order);
+  }, [reels]);
+
+  const enabledReels = useMemo(() => {
+    return sortedReels.filter((r) => r.enabled);
+  }, [sortedReels]);
+
+  // Auto-retrieve Instagram Reel thumbnail where technically supported
+  const autoFetchReelThumbnail = async (url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    setIsFetchingReelThumb(true);
+    try {
+      const res = await fetch(
+        `https://api.microlink.io/?url=${encodeURIComponent(trimmed)}`
+      );
+      if (res.ok) {
+        const json = await res.json();
+        const fetchedImg =
+          json?.data?.image?.url || json?.data?.logo?.url || '';
+        const fetchedTitle = json?.data?.title || '';
+        if (fetchedImg) {
+          setNewReelForm((prev) => ({
+            ...prev,
+            thumbnailUrl: fetchedImg,
+            title: prev.title || fetchedTitle.slice(0, 70),
+          }));
+          showToast('Automatically retrieved Reel thumbnail!');
+          setIsFetchingReelThumb(false);
+          return;
+        }
+      }
+    } catch {
+      // Fallback when cross-origin oEmbed/Microlink is blocked
+    }
+    setNewReelForm((prev) => ({
+      ...prev,
+      thumbnailUrl: prev.thumbnailUrl || BSQUARE_IMAGES.theatre003,
+    }));
+    showToast(
+      'Assigned default preview thumbnail (you can also upload a custom thumbnail).'
+    );
+    setIsFetchingReelThumb(false);
+  };
+
+  // Build WhatsApp URL with prefilled message (supports direct link or phone number)
   const getWhatsAppUrl = (customText?: string) => {
-    const cleanPhone = siteContent.whatsappNumber.replace(/[^0-9]/g, '');
     const msg =
       customText ||
-      `Hello BSquare Global Team, I would like to discuss a project inquiry regarding Smart Theatre, Home Theatre, or 3D Theatre solutions.`;
+      `Hello ${activeCompanyName} Team, I would like to discuss a project inquiry regarding Smart Theatre, Home Theatre, or 3D Theatre solutions.`;
+    const direct = siteContent.whatsappDirectLink?.trim() || '';
+    const cleanPhone = siteContent.whatsappNumber.replace(/[^0-9]/g, '');
+    if (direct.startsWith('http://') || direct.startsWith('https://')) {
+      if (customText && cleanPhone) {
+        return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+      }
+      const sep = direct.includes('?') ? '&' : '?';
+      return `${direct}${sep}text=${encodeURIComponent(msg)}`;
+    }
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
   };
 
@@ -1094,18 +1340,52 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#151819] text-white font-sans selection:bg-[#ba8a40] selection:text-[#111314] overflow-x-hidden">
-      {/* Inject Exact Obry Reference Typography & Custom Keyframe Styles */}
+      {/* Inject Exact Obry Reference Typography, Dynamic Appearance Overrides & Custom Keyframe Styles */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&family=Unbounded:wght@600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cinzel:wght@600;700;800&family=DM+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@500;600;700;800&family=Outfit:wght@500;600;700;800&family=Playfair+Display:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Syne:wght@700;800&family=Unbounded:wght@600;700;800;900&display=swap');
 
-        .font-obry-display {
-          font-family: 'Unbounded', 'Syne', sans-serif;
+        :root {
+          --bsq-heading-font: '${activeTheme.headingFont}', 'Unbounded', sans-serif;
+          --bsq-body-font: '${activeTheme.bodyFont}', 'Plus Jakarta Sans', sans-serif;
+          --bsq-heading-color: ${activeTheme.headingColor};
+          --bsq-body-color: ${activeTheme.bodyTextColor};
+          --bsq-primary: ${activeTheme.primaryColor};
+          --bsq-secondary: ${activeTheme.secondaryColor};
+          --bsq-btn-bg: ${activeTheme.buttonColor};
+          --bsq-btn-text: ${activeTheme.buttonTextColor};
+          --bsq-bg: ${activeTheme.backgroundColor};
         }
-        .font-obry-syne {
-          font-family: 'Syne', 'Unbounded', sans-serif;
+
+        body, .font-sans, .font-obry-body {
+          font-family: var(--bsq-body-font) !important;
         }
-        .font-obry-body {
-          font-family: 'Plus Jakarta Sans', sans-serif;
+        .font-obry-display, .font-obry-syne, h1, h2, h3, h4 {
+          font-family: var(--bsq-heading-font) !important;
+        }
+        h1, h2, h3, h4 {
+          color: var(--bsq-heading-color);
+        }
+        .bg-\[\#151819\] {
+          background-color: var(--bsq-bg) !important;
+        }
+        .bg-\[\#191C1D\] {
+          background-color: var(--bsq-secondary) !important;
+        }
+        .text-\[\#A1A1A1\] {
+          color: var(--bsq-body-color) !important;
+        }
+        .text-\[\#ba8a40\] {
+          color: var(--bsq-primary) !important;
+        }
+        .border-\[\#ba8a40\] {
+          border-color: var(--bsq-primary) !important;
+        }
+        .bg-\[\#ba8a40\] {
+          background-color: var(--bsq-btn-bg) !important;
+          color: var(--bsq-btn-text) !important;
+        }
+        svg path[stroke="#ba8a40"] {
+          stroke: var(--bsq-primary) !important;
         }
 
         @keyframes obryMarquee {
@@ -1135,7 +1415,9 @@ export default function App() {
             <span className="hidden md:inline text-[#2A2E30]">|</span>
             <span className="hidden md:inline-flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5 text-[#ba8a40]" />
-              India: Trivandrum, Kerala &bull; UAE: Ajman
+              {activeAddresses.length === 1
+                ? activeAddresses[0].address
+                : 'India: Trivandrum, Kerala • UAE: Ajman'}
             </span>
           </div>
           <div className="flex items-center gap-4 ml-auto">
@@ -1183,9 +1465,9 @@ export default function App() {
             className="flex items-center text-left group focus:outline-none bg-transparent"
           >
             <SafeImage
-              src={BSQUARE_IMAGES.logo}
-              alt="BSquare Global Logo"
-              fallbackLabel="BSQUARE GLOBAL"
+              src={activeLogo}
+              alt={`${activeCompanyName} Logo`}
+              fallbackLabel={activeCompanyName}
               className="h-11 sm:h-12 w-auto object-contain bg-transparent transition-transform group-hover:scale-[1.02]"
             />
           </button>
@@ -1700,31 +1982,28 @@ export default function App() {
                 )}
 
                 {activeAboutTab === 'locations' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="p-6 rounded-2xl bg-[#151819] border border-[#2A2E30] space-y-4">
-                      <span className="px-3 py-1 rounded-full bg-[#ba8a40]/15 text-[#ba8a40] text-xs font-bold uppercase tracking-wider">
-                        INDIA OPERATIONS &amp; DEVELOPMENT CENTRE
-                      </span>
-                      <h3 className="font-obry-display text-xl font-bold text-white">
-                        Trivandrum, Kerala, India
-                      </h3>
-                      <p className="text-sm text-[#A1A1A1]">{siteContent.indiaAddress}</p>
-                      <div className="text-sm text-[#ba8a40] font-semibold">
-                        Phone: {siteContent.phoneIndia} | WhatsApp: +{siteContent.whatsappNumber}
+                  <div
+                    className={`grid grid-cols-1 ${
+                      activeAddresses.length > 1 ? 'md:grid-cols-2' : ''
+                    } gap-6`}
+                  >
+                    {activeAddresses.map((addr) => (
+                      <div
+                        key={addr.id}
+                        className="p-6 rounded-2xl bg-[#151819] border border-[#2A2E30] space-y-4"
+                      >
+                        <span className="px-3 py-1 rounded-full bg-[#ba8a40]/15 text-[#ba8a40] text-xs font-bold uppercase tracking-wider">
+                          {addr.label}
+                        </span>
+                        <h3 className="font-obry-display text-xl font-bold text-white">
+                          {addr.cityTitle}
+                        </h3>
+                        <p className="text-sm text-[#A1A1A1]">{addr.address}</p>
+                        <div className="text-sm text-[#ba8a40] font-semibold">
+                          Phone: {addr.phone}
+                        </div>
                       </div>
-                    </div>
-                    <div className="p-6 rounded-2xl bg-[#151819] border border-[#2A2E30] space-y-4">
-                      <span className="px-3 py-1 rounded-full bg-[#ba8a40]/15 text-[#ba8a40] text-xs font-bold uppercase tracking-wider">
-                        UAE HEAD OFFICE
-                      </span>
-                      <h3 className="font-obry-display text-xl font-bold text-white">
-                        Ajman, United Arab Emirates
-                      </h3>
-                      <p className="text-sm text-[#A1A1A1]">{siteContent.uaeAddress}</p>
-                      <div className="text-sm text-[#ba8a40] font-semibold">
-                        Phone: {siteContent.phoneUae} / {siteContent.phoneUaeSecondary}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -2345,7 +2624,7 @@ export default function App() {
           {/* -----------------------------------------------------------------
               4I. CONTACT CTA ("Let's Create Something Extraordinary.")
           ----------------------------------------------------------------- */}
-          <section className="py-20 lg:py-24 bg-[#151819]">
+          <section className="py-20 lg:py-24 bg-[#151819] border-b border-[#2A2E30]">
             <div className="max-w-7xl mx-auto px-4 sm:px-8">
               <div className="relative rounded-[32px] bg-gradient-to-br from-[#191C1D] via-[#191C1D] to-[#231c12] border-2 border-[#ba8a40]/60 p-8 sm:p-14 lg:p-16 overflow-hidden">
                 <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
@@ -2382,6 +2661,115 @@ export default function App() {
               </div>
             </div>
           </section>
+
+          {/* -----------------------------------------------------------------
+              INSTAGRAM REELS SECTION — IMMEDIATELY ABOVE WEBSITE FOOTER
+          ----------------------------------------------------------------- */}
+          {enabledReels.length > 0 && (
+            <section className="py-20 lg:py-24 bg-[#111314]">
+              <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-10">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                  <div className="space-y-4">
+                    <ObryBadge icon="🎬">INSTAGRAM REELS</ObryBadge>
+                    <h2 className="font-obry-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white">
+                      Latest Reels &amp; Walkthroughs
+                    </h2>
+                    <ObryGoldArc />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (reelsScrollRef.current) {
+                          reelsScrollRef.current.scrollBy({
+                            left: -320,
+                            behavior: 'smooth',
+                          });
+                        }
+                      }}
+                      aria-label="Scroll Reels Left"
+                      className="w-11 h-11 rounded-full bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] text-white hover:text-[#ba8a40] flex items-center justify-center transition-all"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (reelsScrollRef.current) {
+                          reelsScrollRef.current.scrollBy({
+                            left: 320,
+                            behavior: 'smooth',
+                          });
+                        }
+                      }}
+                      aria-label="Scroll Reels Right"
+                      className="w-11 h-11 rounded-full bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] text-white hover:text-[#ba8a40] flex items-center justify-center transition-all"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                    <a
+                      href={siteContent.instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-[#191C1D] border border-[#ba8a40]/60 hover:bg-[#ba8a40] text-white hover:text-[#111314] font-obry-display text-xs font-extrabold uppercase tracking-wider transition-all"
+                    >
+                      <Instagram className="w-4 h-4" />
+                      <span className="hidden sm:inline">Follow Instagram</span>
+                      <ArrowUpRight className="w-4 h-4" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Horizontal Side-Scrolling Instagram Reels Track */}
+                <div
+                  ref={reelsScrollRef}
+                  className="flex items-stretch gap-5 overflow-x-auto scroll-smooth pb-4"
+                >
+                  {enabledReels.map((reel) => (
+                    <div
+                      key={reel.id}
+                      onClick={() => setActiveReelModal(reel)}
+                      className="group relative w-64 sm:w-72 aspect-[9/16] shrink-0 rounded-[26px] overflow-hidden bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] cursor-pointer transition-all duration-300 shadow-xl"
+                    >
+                      <SafeImage
+                        src={reel.thumbnailUrl}
+                        alt={reel.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#111314] via-[#111314]/25 to-black/30 opacity-85 group-hover:opacity-95 transition-opacity" />
+
+                      {/* Top Instagram Reels Badge */}
+                      <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111314]/85 backdrop-blur-md border border-[#ba8a40]/50 text-[10px] font-obry-display font-bold uppercase tracking-wider text-[#ba8a40]">
+                          <Instagram className="w-3 h-3" />
+                          <span>REEL</span>
+                        </span>
+                      </div>
+
+                      {/* Center Play Icon Overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-14 h-14 rounded-full bg-[#ba8a40] text-[#111314] flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                          <Play className="w-6 h-6 fill-current ml-0.5" />
+                        </div>
+                      </div>
+
+                      {/* Bottom Caption & Watch Link */}
+                      <div className="absolute bottom-5 left-5 right-5 space-y-2">
+                        <h3 className="font-obry-display text-sm font-bold text-white line-clamp-2 leading-snug">
+                          {reel.title}
+                        </h3>
+                        <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#ba8a40]">
+                          <span>Watch Reel</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
         </main>
       )}
 
@@ -2541,39 +2929,31 @@ export default function App() {
 
                 {/* Obry Dashed Circular Icon Contact Rows */}
                 <div className="space-y-5 divide-y divide-[#2A2E30]">
-                  <div className="pt-2 flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-full bg-[#191C1D] border-2 border-dashed border-[#ba8a40] flex items-center justify-center text-[#ba8a40] shrink-0">
-                      <MapPin className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <div className="font-obry-display text-xs font-extrabold uppercase tracking-wider text-[#ba8a40]">
-                        INDIA OFFICE
+                  {activeAddresses.map((addr, idx) => (
+                    <div
+                      key={addr.id}
+                      className={`${idx === 0 ? 'pt-2' : 'pt-5'} flex items-start gap-4`}
+                    >
+                      <div className="w-14 h-14 rounded-full bg-[#191C1D] border-2 border-dashed border-[#ba8a40] flex items-center justify-center text-[#ba8a40] shrink-0">
+                        {idx === 0 ? (
+                          <MapPin className="w-6 h-6" />
+                        ) : (
+                          <Globe className="w-6 h-6" />
+                        )}
                       </div>
-                      <div className="text-base font-bold text-white mt-1">
-                        Trivandrum, Kerala, India
+                      <div>
+                        <div className="font-obry-display text-xs font-extrabold uppercase tracking-wider text-[#ba8a40]">
+                          {addr.label}
+                        </div>
+                        <div className="text-base font-bold text-white mt-1">
+                          {addr.cityTitle}
+                        </div>
+                        <p className="text-sm text-[#A1A1A1] mt-0.5">
+                          {addr.address}
+                        </p>
                       </div>
-                      <p className="text-sm text-[#A1A1A1] mt-0.5">
-                        {siteContent.indiaAddress}
-                      </p>
                     </div>
-                  </div>
-
-                  <div className="pt-5 flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-full bg-[#191C1D] border-2 border-dashed border-[#ba8a40] flex items-center justify-center text-[#ba8a40] shrink-0">
-                      <Globe className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <div className="font-obry-display text-xs font-extrabold uppercase tracking-wider text-[#ba8a40]">
-                        UAE HEAD OFFICE
-                      </div>
-                      <div className="text-base font-bold text-white mt-1">
-                        Ajman, United Arab Emirates
-                      </div>
-                      <p className="text-sm text-[#A1A1A1] mt-0.5">
-                        {siteContent.uaeAddress}
-                      </p>
-                    </div>
-                  </div>
+                  ))}
 
                   <div className="pt-5 flex items-start gap-4">
                     <div className="w-14 h-14 rounded-full bg-[#191C1D] border-2 border-dashed border-[#ba8a40] flex items-center justify-center text-[#ba8a40] shrink-0">
@@ -3028,6 +3408,9 @@ export default function App() {
                     [
                       { id: 'projects', label: `Projects (${projects.length})` },
                       { id: 'gallery', label: `Gallery (${gallery.length})` },
+                      { id: 'company', label: 'Company Settings' },
+                      { id: 'appearance', label: 'Website Appearance' },
+                      { id: 'reels', label: `Instagram Reels (${reels.length})` },
                       { id: 'content', label: 'Website Content & Packages' },
                       { id: 'enquiries', label: `Enquiries (${enquiries.length})` },
                     ] as const
@@ -3798,6 +4181,997 @@ export default function App() {
                   </div>
                 )}
 
+                {/* TAB: COMPANY SETTINGS (DYNAMIC COMPANY INFO, LOGO, ADDRESS RULE, SOCIAL LINKS) */}
+                {adminTab === 'company' && (
+                  <div className="space-y-8">
+                    <div className="p-6 rounded-2xl bg-[#191C1D] border border-[#2A2E30] space-y-6">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                          <h2 className="font-obry-display text-xl font-bold text-white">
+                            Company Settings
+                          </h2>
+                          <p className="text-xs text-[#A1A1A1] mt-1">
+                            Update company name, logo, phone numbers, WhatsApp link, addresses, email, and social media links dynamically across the entire website.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            showToast(
+                              'Company Settings saved and applied across the website!'
+                            )
+                          }
+                          className="px-6 py-2.5 rounded-full bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase"
+                        >
+                          Save Company Settings
+                        </button>
+                      </div>
+
+                      {/* Company Name & Logo Upload */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-[#2A2E30]">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-[#A1A1A1] mb-1.5">
+                              Company Name
+                            </label>
+                            <input
+                              type="text"
+                              value={siteContent.companyName || 'BSquare Global'}
+                              onChange={(e) =>
+                                setSiteContent({
+                                  ...siteContent,
+                                  companyName: e.target.value,
+                                })
+                              }
+                              placeholder="BSquare Global"
+                              className="w-full px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold uppercase tracking-wider text-[#A1A1A1] mb-1.5">
+                              Official Email Address
+                            </label>
+                            <input
+                              type="email"
+                              value={siteContent.email}
+                              onChange={(e) =>
+                                setSiteContent({
+                                  ...siteContent,
+                                  email: e.target.value,
+                                })
+                              }
+                              placeholder="projects@bsquareglobal.com"
+                              className="w-full px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="p-4 rounded-xl bg-[#151819] border border-[#2A2E30] space-y-3">
+                          <div className="text-xs font-bold uppercase tracking-wider text-[#ba8a40]">
+                            Company Logo (Upload &amp; Replace)
+                          </div>
+                          <div className="h-16 px-4 rounded-lg bg-[#111314] border border-[#2A2E30] flex items-center justify-center">
+                            <SafeImage
+                              src={activeLogo}
+                              alt="Current Company Logo"
+                              className="h-12 w-auto object-contain"
+                            />
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <input
+                              type="text"
+                              value={siteContent.companyLogo || ''}
+                              onChange={(e) =>
+                                setSiteContent({
+                                  ...siteContent,
+                                  companyLogo: e.target.value,
+                                })
+                              }
+                              placeholder="Paste Logo URL or upload file..."
+                              className="flex-1 px-3 py-2 rounded-lg bg-[#191C1D] border border-[#2A2E30] text-xs text-white"
+                            />
+                            <label className="px-4 py-2 rounded-lg bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase cursor-pointer inline-flex items-center gap-1.5">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>Upload Logo</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) =>
+                                  handleFileUpload(e, (uri) => {
+                                    setSiteContent({
+                                      ...siteContent,
+                                      companyLogo: uri,
+                                    });
+                                    showToast('Company logo updated!');
+                                  })
+                                }
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Contact Phone & WhatsApp Settings */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-[#2A2E30]">
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#A1A1A1] mb-1.5">
+                            Contact Phone Number (India / Primary)
+                          </label>
+                          <input
+                            type="text"
+                            value={siteContent.phoneIndia}
+                            onChange={(e) =>
+                              setSiteContent({
+                                ...siteContent,
+                                phoneIndia: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#A1A1A1] mb-1.5">
+                            Contact Phone Number (UAE / Secondary)
+                          </label>
+                          <input
+                            type="text"
+                            value={siteContent.phoneUae}
+                            onChange={(e) =>
+                              setSiteContent({
+                                ...siteContent,
+                                phoneUae: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#A1A1A1] mb-1.5">
+                            WhatsApp Number
+                          </label>
+                          <input
+                            type="text"
+                            value={siteContent.whatsappNumber}
+                            onChange={(e) =>
+                              setSiteContent({
+                                ...siteContent,
+                                whatsappNumber: e.target.value,
+                              })
+                            }
+                            placeholder="919744714449"
+                            className="w-full px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#A1A1A1] mb-1.5">
+                            WhatsApp Direct Link (Optional Full URL or wa.me Link)
+                          </label>
+                          <input
+                            type="text"
+                            value={siteContent.whatsappDirectLink || ''}
+                            onChange={(e) =>
+                              setSiteContent({
+                                ...siteContent,
+                                whatsappDirectLink: e.target.value,
+                              })
+                            }
+                            placeholder="https://wa.me/919744714449"
+                            className="w-full px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Company Address Management (Enforces Single vs Multiple Address Rule) */}
+                      <div className="pt-4 border-t border-[#2A2E30] space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <h3 className="font-obry-display text-sm font-bold text-white">
+                              Company Address Management ({activeAddresses.length} Active{' '}
+                              {activeAddresses.length === 1 ? 'Address' : 'Addresses'})
+                            </h3>
+                            <p className="text-xs text-[#A1A1A1]">
+                              If the company has only one address, it is displayed only once without repetition. If multiple addresses are added, all are displayed appropriately.
+                            </p>
+                          </div>
+                          <label className="inline-flex items-center gap-2 text-xs text-[#ba8a40] font-bold cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(siteContent.singleAddressMode)}
+                              onChange={(e) =>
+                                setSiteContent({
+                                  ...siteContent,
+                                  singleAddressMode: e.target.checked,
+                                })
+                              }
+                            />
+                            <span>Single Address Mode (Display Primary Address Only)</span>
+                          </label>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs text-[#A1A1A1] mb-1">
+                              Primary Company Address
+                            </label>
+                            <input
+                              type="text"
+                              value={siteContent.indiaAddress}
+                              onChange={(e) =>
+                                setSiteContent({
+                                  ...siteContent,
+                                  indiaAddress: e.target.value,
+                                })
+                              }
+                              className="w-full px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                            />
+                          </div>
+                          {!siteContent.singleAddressMode && (
+                            <div>
+                              <label className="block text-xs text-[#A1A1A1] mb-1">
+                                Secondary / UAE Office Address (Clear to use only 1 address)
+                              </label>
+                              <input
+                                type="text"
+                                value={siteContent.uaeAddress}
+                                onChange={(e) =>
+                                  setSiteContent({
+                                    ...siteContent,
+                                    uaeAddress: e.target.value,
+                                  })
+                                }
+                                placeholder="Leave blank if company has only one address"
+                                className="w-full px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Additional Future Addresses */}
+                        {!siteContent.singleAddressMode && (
+                          <div className="p-4 rounded-xl bg-[#151819] border border-[#2A2E30] space-y-3">
+                            <div className="text-xs font-bold uppercase text-[#ba8a40]">
+                              Add Additional Branch / Future Office Address
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                              <input
+                                type="text"
+                                value={newAddressForm.label}
+                                onChange={(e) =>
+                                  setNewAddressForm({
+                                    ...newAddressForm,
+                                    label: e.target.value,
+                                  })
+                                }
+                                placeholder="Office Label (e.g. KOCHI OFFICE)"
+                                className="px-3 py-2 rounded-lg bg-[#191C1D] border border-[#2A2E30] text-xs text-white"
+                              />
+                              <input
+                                type="text"
+                                value={newAddressForm.cityTitle}
+                                onChange={(e) =>
+                                  setNewAddressForm({
+                                    ...newAddressForm,
+                                    cityTitle: e.target.value,
+                                  })
+                                }
+                                placeholder="City / Region"
+                                className="px-3 py-2 rounded-lg bg-[#191C1D] border border-[#2A2E30] text-xs text-white"
+                              />
+                              <input
+                                type="text"
+                                value={newAddressForm.address}
+                                onChange={(e) =>
+                                  setNewAddressForm({
+                                    ...newAddressForm,
+                                    address: e.target.value,
+                                  })
+                                }
+                                placeholder="Full Street Address"
+                                className="px-3 py-2 rounded-lg bg-[#191C1D] border border-[#2A2E30] text-xs text-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!newAddressForm.address.trim()) return;
+                                  const next: CompanyAddressEntry = {
+                                    id: `addr-${Date.now()}`,
+                                    label:
+                                      newAddressForm.label.trim() || 'BRANCH OFFICE',
+                                    cityTitle:
+                                      newAddressForm.cityTitle.trim() || 'Regional Hub',
+                                    address: newAddressForm.address.trim(),
+                                    phone:
+                                      newAddressForm.phone.trim() ||
+                                      siteContent.phoneIndia,
+                                  };
+                                  setSiteContent({
+                                    ...siteContent,
+                                    extraAddresses: [
+                                      ...(siteContent.extraAddresses || []),
+                                      next,
+                                    ],
+                                  });
+                                  setNewAddressForm({
+                                    label: '',
+                                    cityTitle: '',
+                                    address: '',
+                                    phone: '',
+                                  });
+                                  showToast('Additional office address added!');
+                                }}
+                                className="px-4 py-2 rounded-lg bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase"
+                              >
+                                Add Address
+                              </button>
+                            </div>
+
+                            {(siteContent.extraAddresses || []).length > 0 && (
+                              <div className="space-y-2 pt-2">
+                                {(siteContent.extraAddresses || []).map((addr) => (
+                                  <div
+                                    key={addr.id}
+                                    className="flex items-center justify-between p-2.5 rounded-lg bg-[#191C1D] border border-[#2A2E30] text-xs"
+                                  >
+                                    <div>
+                                      <strong className="text-[#ba8a40]">
+                                        {addr.label}:
+                                      </strong>{' '}
+                                      <span className="text-white">{addr.address}</span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setSiteContent({
+                                          ...siteContent,
+                                          extraAddresses: (
+                                            siteContent.extraAddresses || []
+                                          ).filter((a) => a.id !== addr.id),
+                                        })
+                                      }
+                                      className="text-red-400 hover:underline"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Social Media Links */}
+                      <div className="pt-4 border-t border-[#2A2E30] space-y-4">
+                        <h3 className="font-obry-display text-sm font-bold text-white">
+                          Social Media Links
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-xs text-[#A1A1A1] mb-1">
+                              Instagram Link
+                            </label>
+                            <input
+                              type="text"
+                              value={siteContent.instagramUrl}
+                              onChange={(e) =>
+                                setSiteContent({
+                                  ...siteContent,
+                                  instagramUrl: e.target.value,
+                                })
+                              }
+                              className="w-full px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-[#A1A1A1] mb-1">
+                              Facebook Link
+                            </label>
+                            <input
+                              type="text"
+                              value={siteContent.facebookUrl}
+                              onChange={(e) =>
+                                setSiteContent({
+                                  ...siteContent,
+                                  facebookUrl: e.target.value,
+                                })
+                              }
+                              className="w-full px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-[#A1A1A1] mb-1">
+                              YouTube Link
+                            </label>
+                            <input
+                              type="text"
+                              value={siteContent.youtubeUrl}
+                              onChange={(e) =>
+                                setSiteContent({
+                                  ...siteContent,
+                                  youtubeUrl: e.target.value,
+                                })
+                              }
+                              className="w-full px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Other Social Media Links */}
+                        <div className="p-4 rounded-xl bg-[#151819] border border-[#2A2E30] space-y-3">
+                          <div className="text-xs font-bold uppercase text-[#ba8a40]">
+                            Other Social Media Links (LinkedIn, X, TikTok, etc.)
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <input
+                              type="text"
+                              value={newSocialPlatform}
+                              onChange={(e) => setNewSocialPlatform(e.target.value)}
+                              placeholder="Platform Name (e.g. LinkedIn)"
+                              className="px-3 py-2 rounded-lg bg-[#191C1D] border border-[#2A2E30] text-xs text-white"
+                            />
+                            <input
+                              type="text"
+                              value={newSocialUrl}
+                              onChange={(e) => setNewSocialUrl(e.target.value)}
+                              placeholder="https://..."
+                              className="flex-1 px-3 py-2 rounded-lg bg-[#191C1D] border border-[#2A2E30] text-xs text-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!newSocialPlatform.trim() || !newSocialUrl.trim())
+                                  return;
+                                setSiteContent({
+                                  ...siteContent,
+                                  otherSocialLinks: [
+                                    ...(siteContent.otherSocialLinks || []),
+                                    {
+                                      id: `soc-${Date.now()}`,
+                                      platform: newSocialPlatform.trim(),
+                                      url: newSocialUrl.trim(),
+                                    },
+                                  ],
+                                });
+                                setNewSocialPlatform('');
+                                setNewSocialUrl('');
+                                showToast('Added social media link!');
+                              }}
+                              className="px-4 py-2 rounded-lg bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase"
+                            >
+                              Add Social Link
+                            </button>
+                          </div>
+
+                          {(siteContent.otherSocialLinks || []).length > 0 && (
+                            <div className="flex flex-wrap gap-2 pt-2">
+                              {(siteContent.otherSocialLinks || []).map((soc) => (
+                                <div
+                                  key={soc.id}
+                                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#191C1D] border border-[#2A2E30] text-xs text-white"
+                                >
+                                  <span>{soc.platform}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setSiteContent({
+                                        ...siteContent,
+                                        otherSocialLinks: (
+                                          siteContent.otherSocialLinks || []
+                                        ).filter((item) => item.id !== soc.id),
+                                      })
+                                    }
+                                    className="text-red-400 font-bold"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB: WEBSITE APPEARANCE (FONTS, COLOURS, LIVE PREVIEW, SAVE & RESET) */}
+                {adminTab === 'appearance' && (
+                  <div className="space-y-8">
+                    <div className="p-6 rounded-2xl bg-[#191C1D] border border-[#2A2E30] space-y-6">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                          <h2 className="font-obry-display text-xl font-bold text-white">
+                            Website Appearance (Fonts &amp; Colours)
+                          </h2>
+                          <p className="text-xs text-[#A1A1A1] mt-1">
+                            Customize typography and theme colours across the entire website while preserving all layouts and animations.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <label className="inline-flex items-center gap-2 text-xs text-[#ba8a40] font-bold cursor-pointer mr-2">
+                            <input
+                              type="checkbox"
+                              checked={livePreviewAppearance}
+                              onChange={(e) =>
+                                setLivePreviewAppearance(e.target.checked)
+                              }
+                            />
+                            <span>Live Preview</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDraftAppearance(DEFAULT_APPEARANCE);
+                              setAppearance(DEFAULT_APPEARANCE);
+                              showToast(
+                                'Website Appearance reset to default fonts and colours.'
+                              );
+                            }}
+                            className="px-4 py-2.5 rounded-full bg-[#151819] border border-[#2A2E30] hover:border-[#ba8a40] text-xs font-bold text-white"
+                          >
+                            Reset to Default
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAppearance(draftAppearance);
+                              showToast(
+                                'Website Appearance saved and applied globally!'
+                              );
+                            }}
+                            className="px-6 py-2.5 rounded-full bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase"
+                          >
+                            Save Changes
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Font Selection Dropdowns */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#2A2E30]">
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#A1A1A1] mb-2">
+                            Main Heading Font
+                          </label>
+                          <select
+                            value={draftAppearance.headingFont}
+                            onChange={(e) =>
+                              setDraftAppearance({
+                                ...draftAppearance,
+                                headingFont: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-3 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                          >
+                            {[
+                              'Unbounded',
+                              'Syne',
+                              'Plus Jakarta Sans',
+                              'Montserrat',
+                              'Playfair Display',
+                              'Outfit',
+                              'Bebas Neue',
+                              'Poppins',
+                              'Cinzel',
+                              'Inter',
+                            ].map((font) => (
+                              <option key={font} value={font}>
+                                {font}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-[#A1A1A1] mb-2">
+                            Body Text Font
+                          </label>
+                          <select
+                            value={draftAppearance.bodyFont}
+                            onChange={(e) =>
+                              setDraftAppearance({
+                                ...draftAppearance,
+                                bodyFont: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-3 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                          >
+                            {[
+                              'Plus Jakarta Sans',
+                              'Inter',
+                              'Poppins',
+                              'Montserrat',
+                              'Outfit',
+                              'DM Sans',
+                              'Roboto',
+                              'Lato',
+                            ].map((font) => (
+                              <option key={font} value={font}>
+                                {font}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Colour Pickers Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-[#2A2E30]">
+                        {(
+                          [
+                            { key: 'headingColor', label: 'Heading Colour' },
+                            { key: 'bodyTextColor', label: 'Body Text Colour' },
+                            { key: 'primaryColor', label: 'Primary Theme Colour' },
+                            { key: 'secondaryColor', label: 'Secondary Theme Colour' },
+                            { key: 'buttonColor', label: 'Button Colour' },
+                            { key: 'buttonTextColor', label: 'Button Text Colour' },
+                            { key: 'backgroundColor', label: 'Background Colour' },
+                          ] as { key: keyof AppearanceSettings; label: string }[]
+                        ).map((item) => (
+                          <div
+                            key={item.key}
+                            className="p-4 rounded-xl bg-[#151819] border border-[#2A2E30] flex items-center justify-between gap-3"
+                          >
+                            <div>
+                              <div className="text-xs font-bold text-white">
+                                {item.label}
+                              </div>
+                              <input
+                                type="text"
+                                value={draftAppearance[item.key]}
+                                onChange={(e) =>
+                                  setDraftAppearance({
+                                    ...draftAppearance,
+                                    [item.key]: e.target.value,
+                                  })
+                                }
+                                className="mt-1 px-2.5 py-1 rounded bg-[#191C1D] border border-[#2A2E30] text-xs text-[#ba8a40] font-mono w-28"
+                              />
+                            </div>
+                            <input
+                              type="color"
+                              value={draftAppearance[item.key]}
+                              onChange={(e) =>
+                                setDraftAppearance({
+                                  ...draftAppearance,
+                                  [item.key]: e.target.value,
+                                })
+                              }
+                              aria-label={item.label}
+                              className="w-11 h-11 rounded-lg cursor-pointer bg-transparent border border-[#2A2E30]"
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Interactive Live Preview Sample Card */}
+                      <div
+                        className="p-6 rounded-2xl border transition-all space-y-4"
+                        style={{
+                          backgroundColor: draftAppearance.backgroundColor,
+                          borderColor: draftAppearance.primaryColor,
+                        }}
+                      >
+                        <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: draftAppearance.primaryColor }}>
+                          LIVE APPEARANCE PREVIEW
+                        </div>
+                        <div
+                          className="p-5 rounded-xl border border-[#2A2E30] space-y-3"
+                          style={{ backgroundColor: draftAppearance.secondaryColor }}
+                        >
+                          <h3
+                            className="text-2xl font-extrabold"
+                            style={{
+                              fontFamily: `'${draftAppearance.headingFont}', sans-serif`,
+                              color: draftAppearance.headingColor,
+                            }}
+                          >
+                            Transforming Spaces. Creating Experiences.
+                          </h3>
+                          <p
+                            className="text-sm leading-relaxed"
+                            style={{
+                              fontFamily: `'${draftAppearance.bodyFont}', sans-serif`,
+                              color: draftAppearance.bodyTextColor,
+                            }}
+                          >
+                            Preview how your selected heading font ({draftAppearance.headingFont}), body font ({draftAppearance.bodyFont}), and custom colour palette appear across BSquare Global cards and buttons.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAppearance(draftAppearance);
+                              showToast('Appearance settings applied!');
+                            }}
+                            className="px-6 py-2.5 rounded-full text-xs font-extrabold uppercase tracking-wider"
+                            style={{
+                              backgroundColor: draftAppearance.buttonColor,
+                              color: draftAppearance.buttonTextColor,
+                              fontFamily: `'${draftAppearance.headingFont}', sans-serif`,
+                            }}
+                          >
+                            Sample Action Button
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB: INSTAGRAM REELS MANAGEMENT */}
+                {adminTab === 'reels' && (
+                  <div className="space-y-8">
+                    <div className="p-6 rounded-2xl bg-[#191C1D] border border-[#2A2E30] space-y-4">
+                      <h2 className="font-obry-display text-lg font-bold text-white">
+                        Instagram Reels Management
+                      </h2>
+                      <p className="text-xs text-[#A1A1A1]">
+                        Add Instagram Reel URLs, auto-fetch or upload custom thumbnails, reorder Reels, and enable/disable individual Reels displayed above the homepage footer.
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input
+                          type="text"
+                          value={newReelForm.reelUrl}
+                          onChange={(e) =>
+                            setNewReelForm({
+                              ...newReelForm,
+                              reelUrl: e.target.value,
+                            })
+                          }
+                          placeholder="Paste Instagram Reel URL (https://www.instagram.com/reel/...)"
+                          className="px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                        />
+                        <input
+                          type="text"
+                          value={newReelForm.title}
+                          onChange={(e) =>
+                            setNewReelForm({
+                              ...newReelForm,
+                              title: e.target.value,
+                            })
+                          }
+                          placeholder="Reel Title / Caption"
+                          className="px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                        />
+                        <input
+                          type="text"
+                          value={newReelForm.thumbnailUrl}
+                          onChange={(e) =>
+                            setNewReelForm({
+                              ...newReelForm,
+                              thumbnailUrl: e.target.value,
+                            })
+                          }
+                          placeholder="Thumbnail URL (or Auto-Fetch / Upload below)"
+                          className="px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-sm text-white"
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => autoFetchReelThumbnail(newReelForm.reelUrl)}
+                          disabled={isFetchingReelThumb}
+                          className="px-4 py-2.5 rounded-xl bg-[#151819] border border-[#ba8a40] text-xs font-bold text-[#ba8a40]"
+                        >
+                          {isFetchingReelThumb
+                            ? 'Fetching Thumbnail...'
+                            : 'Auto-Retrieve Thumbnail'}
+                        </button>
+
+                        <label className="px-4 py-2.5 rounded-xl bg-[#151819] border border-[#2A2E30] text-xs font-bold text-white cursor-pointer inline-flex items-center gap-2">
+                          <Upload className="w-4 h-4 text-[#ba8a40]" />
+                          <span>Upload Custom Thumbnail</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) =>
+                              handleFileUpload(e, (uri) =>
+                                setNewReelForm({
+                                  ...newReelForm,
+                                  thumbnailUrl: uri,
+                                })
+                              )
+                            }
+                          />
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newReelForm.reelUrl.trim()) {
+                              showToast('Please enter an Instagram Reel URL.');
+                              return;
+                            }
+                            const nextReel: InstagramReelItem = {
+                              id: `reel-${Date.now()}`,
+                              title:
+                                newReelForm.title.trim() ||
+                                `${activeCompanyName} Instagram Reel`,
+                              reelUrl: newReelForm.reelUrl.trim(),
+                              thumbnailUrl:
+                                newReelForm.thumbnailUrl.trim() ||
+                                BSQUARE_IMAGES.theatre003,
+                              order: reels.length + 1,
+                              enabled: true,
+                            };
+                            setReels((prev) => [...prev, nextReel]);
+                            setNewReelForm({
+                              title: '',
+                              reelUrl: '',
+                              thumbnailUrl: '',
+                            });
+                            showToast('Instagram Reel added!');
+                          }}
+                          className="px-6 py-2.5 rounded-full bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase"
+                        >
+                          Add Reel
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Existing Reels List (Edit URL, Custom Thumbnail, Reorder, Enable/Disable, Delete) */}
+                    <div className="space-y-3">
+                      {sortedReels.map((reel, idx) => (
+                        <div
+                          key={reel.id}
+                          className="p-4 rounded-2xl bg-[#191C1D] border border-[#2A2E30] flex flex-wrap items-center justify-between gap-4"
+                        >
+                          <div className="flex items-center gap-4 flex-1 min-w-[260px]">
+                            <div className="relative w-14 h-20 rounded-xl overflow-hidden border border-[#2A2E30] shrink-0 bg-[#111314]">
+                              <SafeImage
+                                src={reel.thumbnailUrl}
+                                alt={reel.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="space-y-1.5 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold uppercase text-[#ba8a40]">
+                                  Reel #{idx + 1}
+                                </span>
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    reel.enabled
+                                      ? 'bg-emerald-500/20 text-emerald-300'
+                                      : 'bg-zinc-700 text-zinc-300'
+                                  }`}
+                                >
+                                  {reel.enabled ? 'Enabled' : 'Disabled'}
+                                </span>
+                              </div>
+                              <input
+                                type="text"
+                                value={reel.title}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setReels((prev) =>
+                                    prev.map((item) =>
+                                      item.id === reel.id
+                                        ? { ...item, title: val }
+                                        : item
+                                    )
+                                  );
+                                }}
+                                placeholder="Reel Title"
+                                className="block w-full px-2.5 py-1 rounded bg-[#151819] border border-[#2A2E30] text-xs text-white"
+                              />
+                              <input
+                                type="text"
+                                value={reel.reelUrl}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setReels((prev) =>
+                                    prev.map((item) =>
+                                      item.id === reel.id
+                                        ? { ...item, reelUrl: val }
+                                        : item
+                                    )
+                                  );
+                                }}
+                                placeholder="Instagram Reel URL"
+                                className="block w-full px-2.5 py-1 rounded bg-[#151819] border border-[#2A2E30] text-xs text-[#ba8a40]"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label className="px-3 py-2 rounded-lg bg-[#151819] border border-[#2A2E30] text-xs text-white cursor-pointer inline-flex items-center gap-1">
+                              <Upload className="w-3.5 h-3.5 text-[#ba8a40]" />
+                              <span>Thumb</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) =>
+                                  handleFileUpload(e, (uri) =>
+                                    setReels((prev) =>
+                                      prev.map((item) =>
+                                        item.id === reel.id
+                                          ? { ...item, thumbnailUrl: uri }
+                                          : item
+                                      )
+                                    )
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setReels((prev) =>
+                                  prev.map((item) =>
+                                    item.id === reel.id
+                                      ? { ...item, enabled: !item.enabled }
+                                      : item
+                                  )
+                                )
+                              }
+                              className={`px-3 py-2 rounded-lg text-xs font-bold border ${
+                                reel.enabled
+                                  ? 'bg-[#151819] border-emerald-500/50 text-emerald-300'
+                                  : 'bg-[#151819] border-[#2A2E30] text-[#A1A1A1]'
+                              }`}
+                            >
+                              {reel.enabled ? 'Disable' : 'Enable'}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (idx === 0) return;
+                                const copy = [...sortedReels];
+                                const temp = copy[idx - 1].order;
+                                copy[idx - 1].order = copy[idx].order;
+                                copy[idx].order = temp;
+                                setReels(copy);
+                              }}
+                              aria-label="Move reel up"
+                              className="p-2 rounded-lg bg-[#151819] border border-[#2A2E30] text-white"
+                            >
+                              <ArrowUp className="w-4 h-4" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (idx === sortedReels.length - 1) return;
+                                const copy = [...sortedReels];
+                                const temp = copy[idx + 1].order;
+                                copy[idx + 1].order = copy[idx].order;
+                                copy[idx].order = temp;
+                                setReels(copy);
+                              }}
+                              aria-label="Move reel down"
+                              className="p-2 rounded-lg bg-[#151819] border border-[#2A2E30] text-white"
+                            >
+                              <ArrowDown className="w-4 h-4" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDeleteConfirmTarget({
+                                  type: 'reel',
+                                  id: reel.id,
+                                  title: reel.title,
+                                })
+                              }
+                              aria-label={`Delete ${reel.title}`}
+                              className="p-2 rounded-lg bg-[#151819] border border-[#2A2E30] text-red-400"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* TAB 4: ENQUIRIES INBOX */}
                 {adminTab === 'enquiries' && (
                   <div className="p-6 rounded-2xl bg-[#191C1D] border border-[#2A2E30] space-y-4">
@@ -3850,52 +5224,69 @@ export default function App() {
             <div className="lg:col-span-4 space-y-5">
               <div className="flex items-center">
                 <SafeImage
-                  src={BSQUARE_IMAGES.logo}
-                  alt="BSquare Global Logo"
-                  fallbackLabel="BSQUARE GLOBAL"
+                  src={activeLogo}
+                  alt={`${activeCompanyName} Logo`}
+                  fallbackLabel={activeCompanyName}
                   className="h-11 sm:h-12 w-auto object-contain bg-transparent"
                 />
               </div>
               <p className="text-sm leading-relaxed text-[#A1A1A1]">
-                We create intelligent solutions for immersive Smart Theatre, Home Theatre, and 3D Theatre experiences across India and the UAE.
+                We create intelligent solutions for immersive Smart Theatre, Home Theatre, and 3D Theatre experiences.
               </p>
-              <div className="flex items-center gap-3 pt-1">
-                <a
-                  href={siteContent.instagramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="BSquare Global Instagram"
-                  className="w-10 h-10 rounded-full bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] hover:bg-[#ba8a40] text-white hover:text-[#111314] flex items-center justify-center transition-all"
-                >
-                  <Instagram className="w-4 h-4" />
-                </a>
-                <a
-                  href={siteContent.facebookUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="BSquare Global Facebook"
-                  className="w-10 h-10 rounded-full bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] hover:bg-[#ba8a40] text-white hover:text-[#111314] flex items-center justify-center transition-all"
-                >
-                  <Facebook className="w-4 h-4" />
-                </a>
-                <a
-                  href={siteContent.youtubeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="BSquare Global YouTube"
-                  className="w-10 h-10 rounded-full bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] hover:bg-[#ba8a40] text-white hover:text-[#111314] flex items-center justify-center transition-all"
-                >
-                  <Youtube className="w-4 h-4" />
-                </a>
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                {siteContent.instagramUrl && (
+                  <a
+                    href={siteContent.instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${activeCompanyName} Instagram`}
+                    className="w-10 h-10 rounded-full bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] hover:bg-[#ba8a40] text-white hover:text-[#111314] flex items-center justify-center transition-all"
+                  >
+                    <Instagram className="w-4 h-4" />
+                  </a>
+                )}
+                {siteContent.facebookUrl && (
+                  <a
+                    href={siteContent.facebookUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${activeCompanyName} Facebook`}
+                    className="w-10 h-10 rounded-full bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] hover:bg-[#ba8a40] text-white hover:text-[#111314] flex items-center justify-center transition-all"
+                  >
+                    <Facebook className="w-4 h-4" />
+                  </a>
+                )}
+                {siteContent.youtubeUrl && (
+                  <a
+                    href={siteContent.youtubeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${activeCompanyName} YouTube`}
+                    className="w-10 h-10 rounded-full bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] hover:bg-[#ba8a40] text-white hover:text-[#111314] flex items-center justify-center transition-all"
+                  >
+                    <Youtube className="w-4 h-4" />
+                  </a>
+                )}
                 <a
                   href={getWhatsAppUrl()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="BSquare Global WhatsApp"
+                  aria-label={`${activeCompanyName} WhatsApp`}
                   className="w-10 h-10 rounded-full bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] hover:bg-[#ba8a40] text-white hover:text-[#111314] flex items-center justify-center transition-all"
                 >
                   <MessageCircle className="w-4 h-4" />
                 </a>
+                {(siteContent.otherSocialLinks || []).map((soc) => (
+                  <a
+                    key={soc.id}
+                    href={soc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 h-10 rounded-full bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] text-xs font-bold text-white hover:text-[#ba8a40] inline-flex items-center justify-center transition-all"
+                  >
+                    {soc.platform}
+                  </a>
+                ))}
               </div>
             </div>
 
@@ -3926,74 +5317,59 @@ export default function App() {
               </ul>
             </div>
 
-            {/* Col 3: India Contact Information */}
-            <div className="lg:col-span-3 space-y-4">
-              <h3 className="font-obry-display text-xs font-extrabold uppercase tracking-[0.2em] text-[#ba8a40]">
-                INDIA OFFICE
-              </h3>
-              <p className="text-sm text-white/90 leading-relaxed">
-                {siteContent.indiaAddress}
-              </p>
-              <div className="text-sm space-y-1">
-                <div>
-                  Phone:{' '}
-                  <a
-                    href={`tel:${siteContent.phoneIndia.replace(/\s+/g, '')}`}
-                    className="text-white hover:text-[#ba8a40]"
-                  >
-                    {siteContent.phoneIndia}
-                  </a>
-                </div>
-                <div>
-                  WhatsApp:{' '}
-                  <a
-                    href={getWhatsAppUrl()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#ba8a40] hover:underline"
-                  >
-                    +{siteContent.whatsappNumber}
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Col 4: UAE Contact Information & Email */}
-            <div className="lg:col-span-3 space-y-4">
-              <h3 className="font-obry-display text-xs font-extrabold uppercase tracking-[0.2em] text-[#ba8a40]">
-                UAE OFFICE
-              </h3>
-              <p className="text-sm text-white/90 leading-relaxed">
-                {siteContent.uaeAddress}
-              </p>
-              <div className="text-sm space-y-1">
-                <div>
-                  Phone:{' '}
-                  <a
-                    href={`tel:${siteContent.phoneUae.replace(/\s+/g, '')}`}
-                    className="text-white hover:text-[#ba8a40]"
-                  >
-                    {siteContent.phoneUae}
-                  </a>{' '}
-                  / {siteContent.phoneUaeSecondary}
-                </div>
-                <div>
-                  Email:{' '}
-                  <a
-                    href={`mailto:${siteContent.email}`}
-                    className="text-[#ba8a40] hover:underline"
-                  >
-                    {siteContent.email}
-                  </a>
+            {/* Dynamic Address Columns: Displayed Once If Single Address, or Multiple Columns If Multiple Addresses */}
+            {activeAddresses.map((addr, idx) => (
+              <div
+                key={addr.id}
+                className={`${
+                  activeAddresses.length === 1 ? 'lg:col-span-6' : 'lg:col-span-3'
+                } space-y-4`}
+              >
+                <h3 className="font-obry-display text-xs font-extrabold uppercase tracking-[0.2em] text-[#ba8a40]">
+                  {addr.label}
+                </h3>
+                <p className="text-sm text-white/90 leading-relaxed">
+                  {addr.address}
+                </p>
+                <div className="text-sm space-y-1">
+                  <div>
+                    Phone:{' '}
+                    <span className="text-white">{addr.phone}</span>
+                  </div>
+                  {idx === 0 && (
+                    <div>
+                      WhatsApp:{' '}
+                      <a
+                        href={getWhatsAppUrl()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#ba8a40] hover:underline"
+                      >
+                        +{siteContent.whatsappNumber}
+                      </a>
+                    </div>
+                  )}
+                  {(idx === activeAddresses.length - 1 ||
+                    activeAddresses.length === 1) && (
+                    <div>
+                      Email:{' '}
+                      <a
+                        href={`mailto:${siteContent.email}`}
+                        className="text-[#ba8a40] hover:underline"
+                      >
+                        {siteContent.email}
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            ))}
           </div>
 
           {/* Copyright & Discreet Admin Login Link */}
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#888888]">
             <div>
-              Copyright &copy; {new Date().getFullYear()} BSquare Global. All Rights Reserved.
+              Copyright &copy; {new Date().getFullYear()} {activeCompanyName}. All Rights Reserved.
             </div>
             <div className="flex items-center gap-6">
               <span>Smart Theatre &bull; Home Theatre &bull; 3D Theatre</span>
@@ -4423,11 +5799,16 @@ export default function App() {
                       prev.filter((p) => p.id !== deleteConfirmTarget.id)
                     );
                     showToast('Project deleted.');
-                  } else {
+                  } else if (deleteConfirmTarget.type === 'gallery') {
                     setGallery((prev) =>
                       prev.filter((g) => g.id !== deleteConfirmTarget.id)
                     );
                     showToast('Photograph deleted from Gallery.');
+                  } else if (deleteConfirmTarget.type === 'reel') {
+                    setReels((prev) =>
+                      prev.filter((r) => r.id !== deleteConfirmTarget.id)
+                    );
+                    showToast('Instagram Reel deleted.');
                   }
                   setDeleteConfirmTarget(null);
                 }}
@@ -4435,6 +5816,80 @@ export default function App() {
               >
                 Delete Permanently
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODAL 6: INSTAGRAM REEL VIEWER / PLAYER MODAL
+      ===================================================================== */}
+      {activeReelModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setActiveReelModal(null)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-3xl bg-[#191C1D] border-2 border-[#ba8a40] overflow-hidden shadow-2xl p-5 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 text-xs font-obry-display font-bold uppercase tracking-wider text-[#ba8a40]">
+                <Instagram className="w-4 h-4" />
+                <span>INSTAGRAM REEL</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveReelModal(null)}
+                aria-label="Close Reel Modal"
+                className="w-8 h-8 rounded-full bg-[#151819] text-white flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="relative aspect-[9/16] max-h-[65vh] w-full mx-auto rounded-2xl overflow-hidden bg-black border border-[#2A2E30]">
+              {/\/reel\/([A-Za-z0-9_-]+)/.test(activeReelModal.reelUrl) ? (
+                <iframe
+                  src={`https://www.instagram.com/reel/${
+                    activeReelModal.reelUrl.match(/\/reel\/([A-Za-z0-9_-]+)/)?.[1]
+                  }/embed`}
+                  title={activeReelModal.title}
+                  className="w-full h-full"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="relative w-full h-full">
+                  <SafeImage
+                    src={activeReelModal.thumbnailUrl}
+                    alt={activeReelModal.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center p-6 text-center space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-[#ba8a40] text-[#111314] flex items-center justify-center shadow-2xl">
+                      <Instagram className="w-8 h-8" />
+                    </div>
+                    <h4 className="font-obry-display text-base font-bold text-white">
+                      {activeReelModal.title}
+                    </h4>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <div className="text-xs font-bold text-white truncate">
+                {activeReelModal.title}
+              </div>
+              <a
+                href={activeReelModal.reelUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase tracking-wider shrink-0"
+              >
+                <span>Open on Instagram</span>
+                <ArrowUpRight className="w-4 h-4" />
+              </a>
             </div>
           </div>
         </div>
