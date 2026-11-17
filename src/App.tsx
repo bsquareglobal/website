@@ -844,7 +844,7 @@ const ObryGoldArc: React.FC<{ className?: string }> = ({ className = 'w-36 h-3' 
   >
     <path
       d="M3 14C55 3 145 3 197 14"
-      stroke="#ba8a40"
+      stroke="var(--bsq-primary, #ba8a40)"
       strokeWidth="3.5"
       strokeLinecap="round"
     />
@@ -918,6 +918,7 @@ export default function App() {
   );
   const [activeReelModal, setActiveReelModal] = useState<InstagramReelItem | null>(null);
   const reelsScrollRef = useRef<HTMLDivElement | null>(null);
+  const [isReelsHovered, setIsReelsHovered] = useState<boolean>(false);
 
   // Save state changes to localStorage & optional Supabase backend
   useEffect(() => {
@@ -941,6 +942,11 @@ export default function App() {
   useEffect(() => {
     saveToStorage('bsquare_appearance_v1', appearance);
   }, [appearance]);
+  useEffect(() => {
+    if (livePreviewAppearance) {
+      setAppearance(draftAppearance);
+    }
+  }, [draftAppearance, livePreviewAppearance]);
   useEffect(() => {
     saveToStorage('bsquare_reels_v1', reels);
   }, [reels]);
@@ -1114,6 +1120,24 @@ export default function App() {
     }, 5000);
     return () => clearInterval(timer);
   }, [currentPage, heroSlides.length]);
+
+  // Auto-scroll Instagram Reels carousel horizontally on Homepage
+  useEffect(() => {
+    if (currentPage !== 'home' || isReelsHovered || enabledReels.length === 0)
+      return;
+    const interval = setInterval(() => {
+      const el = reelsScrollRef.current;
+      if (!el) return;
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (maxScroll <= 10) return;
+      if (el.scrollLeft >= maxScroll - 16) {
+        el.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        el.scrollBy({ left: 300, behavior: 'smooth' });
+      }
+    }, 3200);
+    return () => clearInterval(interval);
+  }, [currentPage, isReelsHovered, enabledReels.length]);
 
   // Ordered Gallery (Categories Removed)
   const sortedGallery = useMemo(() => {
@@ -1356,34 +1380,106 @@ export default function App() {
           --bsq-bg: ${activeTheme.backgroundColor};
         }
 
+        /* 1. Fonts */
         body, .font-sans, .font-obry-body {
           font-family: var(--bsq-body-font) !important;
         }
         .font-obry-display, .font-obry-syne, h1, h2, h3, h4 {
           font-family: var(--bsq-heading-font) !important;
         }
-        h1, h2, h3, h4 {
-          color: var(--bsq-heading-color);
+
+        /* 2. Heading Colour */
+        h1, h2, h3, h4,
+        h1[class*="text-white"],
+        h2[class*="text-white"],
+        h3[class*="text-white"],
+        h4[class*="text-white"] {
+          color: var(--bsq-heading-color) !important;
         }
-        .bg-\[\#151819\] {
-          background-color: var(--bsq-bg) !important;
-        }
-        .bg-\[\#191C1D\] {
-          background-color: var(--bsq-secondary) !important;
-        }
-        .text-\[\#A1A1A1\] {
+
+        /* 3. Body Text Colour */
+        [class*="text-[#A1A1A1]"],
+        [class*="text-[#888888]"],
+        p[class*="text-white/85"],
+        p[class*="text-white/90"] {
           color: var(--bsq-body-color) !important;
         }
-        .text-\[\#ba8a40\] {
+
+        /* 4. Background Colour */
+        [class*="bg-[#151819]"],
+        section[class*="bg-[#111314]"],
+        main[class*="bg-[#111314]"],
+        footer[class*="bg-[#111314]"],
+        div[class*="bg-[#111314]"]:not([class*="rounded-full"]) {
+          background-color: var(--bsq-bg) !important;
+        }
+
+        /* 5. Secondary / Card Theme Colour */
+        [class*="bg-[#191C1D]"] {
+          background-color: var(--bsq-secondary) !important;
+        }
+
+        /* 6. Primary Theme Colour (Text, Icons, Borders, Badges, Marquee, SVGs) */
+        [class*="text-[#ba8a40]"],
+        [class*="hover:text-[#ba8a40]"]:hover,
+        .group:hover [class*="group-hover:text-[#ba8a40]"] {
           color: var(--bsq-primary) !important;
         }
-        .border-\[\#ba8a40\] {
+
+        [class*="border-[#ba8a40]"],
+        [class*="hover:border-[#ba8a40]"]:hover,
+        [class*="focus:border-[#ba8a40]"]:focus,
+        .group:hover [class*="group-hover:border-[#ba8a40]"] {
           border-color: var(--bsq-primary) !important;
         }
-        .bg-\[\#ba8a40\] {
+
+        div[class*="bg-[#ba8a40]"]:not([class*="bg-[#ba8a40]/"]),
+        span[class*="bg-[#ba8a40]"]:not([class*="bg-[#ba8a40]/"]) {
+          background-color: var(--bsq-primary) !important;
+          color: var(--bsq-btn-text) !important;
+        }
+
+        [class*="bg-[#ba8a40]/15"],
+        [class*="bg-[#ba8a40]/20"] {
+          background-color: color-mix(in srgb, var(--bsq-primary) 18%, transparent) !important;
+        }
+
+        /* Locked Official WhatsApp Green (#25D366) — Immune to Admin Theme Changes */
+        .whatsapp-fixed-brand {
+          background-color: #25D366 !important;
+          color: #FFFFFF !important;
+          border-color: #25D366 !important;
+        }
+        .whatsapp-fixed-brand:hover {
+          background-color: #20bd5a !important;
+          color: #FFFFFF !important;
+          border-color: #20bd5a !important;
+        }
+        .whatsapp-fixed-brand span,
+        .whatsapp-fixed-brand svg {
+          color: #FFFFFF !important;
+        }
+        .whatsapp-fixed-icon {
+          color: #25D366 !important;
+        }
+
+        /* 7. Button Colour & Button Text Colour */
+        button[class*="bg-[#ba8a40]"],
+        a[class*="bg-[#ba8a40]"],
+        label[class*="bg-[#ba8a40]"],
+        button[class*="hover:bg-[#ba8a40]"]:hover,
+        a[class*="hover:bg-[#ba8a40]"]:hover,
+        .group:hover [class*="group-hover:bg-[#ba8a40]"] {
           background-color: var(--bsq-btn-bg) !important;
           color: var(--bsq-btn-text) !important;
         }
+        button[class*="bg-[#ba8a40]"] span,
+        button[class*="bg-[#ba8a40]"] svg,
+        a[class*="bg-[#ba8a40]"] span,
+        a[class*="bg-[#ba8a40]"] svg {
+          color: var(--bsq-btn-text) !important;
+        }
+
         svg path[stroke="#ba8a40"] {
           stroke: var(--bsq-primary) !important;
         }
@@ -1536,9 +1632,9 @@ export default function App() {
               href={getWhatsAppUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#ba8a40] hover:bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase tracking-wider transition-all transform hover:-translate-y-0.5 shadow-lg shadow-[#ba8a40]/10"
+              className="whatsapp-fixed-brand inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-obry-display text-xs font-extrabold uppercase tracking-wider transition-all transform hover:-translate-y-0.5 shadow-lg shadow-[#25D366]/25"
             >
-              <MessageCircle className="w-4 h-4 fill-[#111314]" />
+              <MessageCircle className="w-4 h-4 fill-white text-white" />
               <span className="hidden sm:inline">WHATSAPP</span>
               <ArrowUpRight className="w-4 h-4" />
             </a>
@@ -1591,10 +1687,10 @@ export default function App() {
                 href={getWhatsAppUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-5 rounded-full bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase tracking-wider"
+                className="whatsapp-fixed-brand flex-1 inline-flex items-center justify-center gap-2 py-3 px-5 rounded-full bg-[#25D366] text-white font-obry-display text-xs font-extrabold uppercase tracking-wider"
               >
-                <MessageCircle className="w-4 h-4" />
-                <span>WhatsApp (+91 97447 14449)</span>
+                <MessageCircle className="w-4 h-4 fill-white text-white" />
+                <span>WhatsApp (+{siteContent.whatsappNumber})</span>
               </a>
             </div>
           </div>
@@ -2651,9 +2747,9 @@ export default function App() {
                       href={getWhatsAppUrl()}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-3 px-8 py-4 rounded-full bg-[#111314] hover:bg-[#222628] text-white border border-[#ba8a40] font-obry-display text-xs sm:text-sm font-extrabold uppercase tracking-wider transition-all"
+                      className="whatsapp-fixed-brand inline-flex items-center gap-3 px-8 py-4 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white border border-[#25D366] font-obry-display text-xs sm:text-sm font-extrabold uppercase tracking-wider shadow-xl shadow-[#25D366]/20 transition-all"
                     >
-                      <MessageCircle className="w-4 h-4 text-[#ba8a40]" />
+                      <MessageCircle className="w-4 h-4 fill-white text-white" />
                       <span>WhatsApp Us</span>
                     </a>
                   </div>
@@ -2721,16 +2817,20 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Horizontal Side-Scrolling Instagram Reels Track */}
+                {/* Horizontal Side-Scrolling 1:1 Instagram Reels Track (Auto-Scrolling) */}
                 <div
                   ref={reelsScrollRef}
+                  onMouseEnter={() => setIsReelsHovered(true)}
+                  onMouseLeave={() => setIsReelsHovered(false)}
+                  onTouchStart={() => setIsReelsHovered(true)}
+                  onTouchEnd={() => setIsReelsHovered(false)}
                   className="flex items-stretch gap-5 overflow-x-auto scroll-smooth pb-4"
                 >
                   {enabledReels.map((reel) => (
                     <div
                       key={reel.id}
                       onClick={() => setActiveReelModal(reel)}
-                      className="group relative w-64 sm:w-72 aspect-[9/16] shrink-0 rounded-[26px] overflow-hidden bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] cursor-pointer transition-all duration-300 shadow-xl"
+                      className="group relative w-64 sm:w-72 aspect-square shrink-0 rounded-[26px] overflow-hidden bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] cursor-pointer transition-all duration-300 shadow-xl"
                     >
                       <SafeImage
                         src={reel.thumbnailUrl}
@@ -3005,9 +3105,9 @@ export default function App() {
                     href={getWhatsAppUrl()}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-5 py-3 rounded-full bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase tracking-wider inline-flex items-center gap-2 shrink-0"
+                    className="whatsapp-fixed-brand px-5 py-3 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-obry-display text-xs font-extrabold uppercase tracking-wider inline-flex items-center gap-2 shrink-0 shadow-lg shadow-[#25D366]/20"
                   >
-                    <MessageCircle className="w-4 h-4" />
+                    <MessageCircle className="w-4 h-4 fill-white text-white" />
                     <span>Chat Now</span>
                   </a>
                 </div>
@@ -3059,9 +3159,9 @@ export default function App() {
                           )}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase tracking-wider"
+                          className="whatsapp-fixed-brand inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-obry-display text-xs font-extrabold uppercase tracking-wider shadow-lg shadow-[#25D366]/20"
                         >
-                          <MessageCircle className="w-4 h-4" />
+                          <MessageCircle className="w-4 h-4 fill-white text-white" />
                           <span>Send via WhatsApp Now</span>
                         </a>
 
@@ -5020,7 +5120,7 @@ export default function App() {
                           className="p-4 rounded-2xl bg-[#191C1D] border border-[#2A2E30] flex flex-wrap items-center justify-between gap-4"
                         >
                           <div className="flex items-center gap-4 flex-1 min-w-[260px]">
-                            <div className="relative w-14 h-20 rounded-xl overflow-hidden border border-[#2A2E30] shrink-0 bg-[#111314]">
+                            <div className="relative w-16 h-16 aspect-square rounded-xl overflow-hidden border border-[#2A2E30] shrink-0 bg-[#111314]">
                               <SafeImage
                                 src={reel.thumbnailUrl}
                                 alt={reel.title}
@@ -5272,9 +5372,9 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={`${activeCompanyName} WhatsApp`}
-                  className="w-10 h-10 rounded-full bg-[#191C1D] border border-[#2A2E30] hover:border-[#ba8a40] hover:bg-[#ba8a40] text-white hover:text-[#111314] flex items-center justify-center transition-all"
+                  className="whatsapp-fixed-brand w-10 h-10 rounded-full bg-[#25D366] border border-[#25D366] text-white flex items-center justify-center transition-all shadow-md shadow-[#25D366]/20"
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <MessageCircle className="w-4 h-4 fill-white text-white" />
                 </a>
                 {(siteContent.otherSocialLinks || []).map((soc) => (
                   <a
@@ -5387,16 +5487,16 @@ export default function App() {
       </footer>
 
       {/* =====================================================================
-          FLOATING WHATSAPP QUICK ACTION BUTTON
+          FLOATING WHATSAPP QUICK ACTION BUTTON (OFFICIAL WHATSAPP GREEN #25D366)
       ===================================================================== */}
       <a
         href={getWhatsAppUrl()}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat on WhatsApp"
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-[#ba8a40] hover:bg-[#ba8a40] text-[#111314] shadow-2xl flex items-center justify-center transition-transform hover:scale-110"
+        className="whatsapp-fixed-brand fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-2xl shadow-[#25D366]/30 flex items-center justify-center transition-transform hover:scale-110"
       >
-        <MessageCircle className="w-7 h-7 fill-[#111314]" />
+        <MessageCircle className="w-7 h-7 fill-white text-white" />
       </a>
 
       {/* =====================================================================
