@@ -844,7 +844,7 @@ const ObryGoldArc: React.FC<{ className?: string }> = ({ className = 'w-36 h-3' 
   >
     <path
       d="M3 14C55 3 145 3 197 14"
-      stroke="#ba8a40"
+      stroke="var(--bsq-primary, #ba8a40)"
       strokeWidth="3.5"
       strokeLinecap="round"
     />
@@ -941,6 +941,11 @@ export default function App() {
   useEffect(() => {
     saveToStorage('bsquare_appearance_v1', appearance);
   }, [appearance]);
+  useEffect(() => {
+    if (livePreviewAppearance) {
+      setAppearance(draftAppearance);
+    }
+  }, [draftAppearance, livePreviewAppearance]);
   useEffect(() => {
     saveToStorage('bsquare_reels_v1', reels);
   }, [reels]);
@@ -1356,34 +1361,87 @@ export default function App() {
           --bsq-bg: ${activeTheme.backgroundColor};
         }
 
+        /* 1. Fonts */
         body, .font-sans, .font-obry-body {
           font-family: var(--bsq-body-font) !important;
         }
         .font-obry-display, .font-obry-syne, h1, h2, h3, h4 {
           font-family: var(--bsq-heading-font) !important;
         }
-        h1, h2, h3, h4 {
-          color: var(--bsq-heading-color);
+
+        /* 2. Heading Colour */
+        h1, h2, h3, h4,
+        h1[class*="text-white"],
+        h2[class*="text-white"],
+        h3[class*="text-white"],
+        h4[class*="text-white"] {
+          color: var(--bsq-heading-color) !important;
         }
-        .bg-\[\#151819\] {
-          background-color: var(--bsq-bg) !important;
-        }
-        .bg-\[\#191C1D\] {
-          background-color: var(--bsq-secondary) !important;
-        }
-        .text-\[\#A1A1A1\] {
+
+        /* 3. Body Text Colour */
+        [class*="text-[#A1A1A1]"],
+        [class*="text-[#888888]"],
+        p[class*="text-white/85"],
+        p[class*="text-white/90"] {
           color: var(--bsq-body-color) !important;
         }
-        .text-\[\#ba8a40\] {
+
+        /* 4. Background Colour */
+        [class*="bg-[#151819]"],
+        section[class*="bg-[#111314]"],
+        main[class*="bg-[#111314]"],
+        footer[class*="bg-[#111314]"],
+        div[class*="bg-[#111314]"]:not([class*="rounded-full"]) {
+          background-color: var(--bsq-bg) !important;
+        }
+
+        /* 5. Secondary / Card Theme Colour */
+        [class*="bg-[#191C1D]"] {
+          background-color: var(--bsq-secondary) !important;
+        }
+
+        /* 6. Primary Theme Colour (Text, Icons, Borders, Badges, Marquee, SVGs) */
+        [class*="text-[#ba8a40]"],
+        [class*="hover:text-[#ba8a40]"]:hover,
+        .group:hover [class*="group-hover:text-[#ba8a40]"] {
           color: var(--bsq-primary) !important;
         }
-        .border-\[\#ba8a40\] {
+
+        [class*="border-[#ba8a40]"],
+        [class*="hover:border-[#ba8a40]"]:hover,
+        [class*="focus:border-[#ba8a40]"]:focus,
+        .group:hover [class*="group-hover:border-[#ba8a40]"] {
           border-color: var(--bsq-primary) !important;
         }
-        .bg-\[\#ba8a40\] {
+
+        div[class*="bg-[#ba8a40]"]:not([class*="bg-[#ba8a40]/"]),
+        span[class*="bg-[#ba8a40]"]:not([class*="bg-[#ba8a40]/"]) {
+          background-color: var(--bsq-primary) !important;
+          color: var(--bsq-btn-text) !important;
+        }
+
+        [class*="bg-[#ba8a40]/15"],
+        [class*="bg-[#ba8a40]/20"] {
+          background-color: color-mix(in srgb, var(--bsq-primary) 18%, transparent) !important;
+        }
+
+        /* 7. Button Colour & Button Text Colour */
+        button[class*="bg-[#ba8a40]"],
+        a[class*="bg-[#ba8a40]"],
+        label[class*="bg-[#ba8a40]"],
+        button[class*="hover:bg-[#ba8a40]"]:hover,
+        a[class*="hover:bg-[#ba8a40]"]:hover,
+        .group:hover [class*="group-hover:bg-[#ba8a40]"] {
           background-color: var(--bsq-btn-bg) !important;
           color: var(--bsq-btn-text) !important;
         }
+        button[class*="bg-[#ba8a40]"] span,
+        button[class*="bg-[#ba8a40]"] svg,
+        a[class*="bg-[#ba8a40]"] span,
+        a[class*="bg-[#ba8a40]"] svg {
+          color: var(--bsq-btn-text) !important;
+        }
+
         svg path[stroke="#ba8a40"] {
           stroke: var(--bsq-primary) !important;
         }
