@@ -5,17 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BSquare Global | Smart Theatre, Home Theatre & 3D Theatre — India & UAE</title>
     <meta name="description" content="BSquare Global delivers turnkey Smart Theatre, Home Theatre, and 3D Theatre solutions across India and the UAE." />
-    <script type="importmap">
-      {
-        "imports": {
-          "react": "https://esm.sh/react@18.3.1",
-          "react-dom": "https://esm.sh/react-dom@18.3.1",
-          "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
-          "lucide-react": "https://esm.sh/lucide-react@0.454.0?deps=react@18.3.1"
-        }
-      }
-    </script>
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://cdn.jsdelivr.net/npm/lucide@0.454.0/dist/umd/lucide.min.js"></script>
   </head>
   <body class="bg-[#151819] text-white antialiased">
     <div id="root">
@@ -23,10 +16,107 @@
         LOADING BSQUARE GLOBAL...
       </div>
     </div>
-    <script type="module">
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import { createRoot } from "react-dom/client";
-import { Play, ArrowUpRight, Check, Plus, MapPin, Phone, Mail, Search, Menu, X, ChevronLeft, ChevronRight, SlidersHorizontal, ShieldCheck, Cpu, BadgeDollarSign, Users, Sparkles, Award, Film, Tv, Compass, Lock, LogOut, Edit3, Trash2, Upload, ArrowUp, ArrowDown, Eye, CheckCircle2, AlertCircle, Instagram, Facebook, Youtube, Globe, Layers, Volume2, MonitorPlay, RotateCcw } from 'lucide-react';
+    <script>
+const {
+  useState,
+  useEffect,
+  useMemo,
+  useRef
+} = React;
+const {
+  createRoot
+} = ReactDOM;
+function makeLucideIcon(iconName) {
+  return function LucideIcon(props) {
+    const {
+      className = '',
+      size = 24,
+      strokeWidth = 2,
+      ...rest
+    } = props || {};
+    const lib = typeof window !== 'undefined' && window.lucide ? window.lucide : {};
+    const iconData = lib.icons && lib.icons[iconName] || lib[iconName];
+    if (!Array.isArray(iconData)) {
+      return React.createElement('svg', {
+        xmlns: 'http://www.w3.org/2000/svg',
+        width: size,
+        height: size,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        className,
+        ...rest
+      });
+    }
+    const children = iconData.map((node, idx) => {
+      if (Array.isArray(node) && node.length >= 2) {
+        return React.createElement(node[0], {
+          key: idx,
+          ...node[1]
+        });
+      }
+      return null;
+    });
+    return React.createElement('svg', {
+      xmlns: 'http://www.w3.org/2000/svg',
+      width: size,
+      height: size,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      className,
+      ...rest
+    }, children);
+  };
+}
+const Play = makeLucideIcon('Play');
+const ArrowUpRight = makeLucideIcon('ArrowUpRight');
+const Check = makeLucideIcon('Check');
+const Plus = makeLucideIcon('Plus');
+const Minus = makeLucideIcon('Minus');
+const MapPin = makeLucideIcon('MapPin');
+const Phone = makeLucideIcon('Phone');
+const Mail = makeLucideIcon('Mail');
+const MessageCircle = makeLucideIcon('MessageCircle');
+const Search = makeLucideIcon('Search');
+const Menu = makeLucideIcon('Menu');
+const X = makeLucideIcon('X');
+const ChevronLeft = makeLucideIcon('ChevronLeft');
+const ChevronRight = makeLucideIcon('ChevronRight');
+const SlidersHorizontal = makeLucideIcon('SlidersHorizontal');
+const ShieldCheck = makeLucideIcon('ShieldCheck');
+const Cpu = makeLucideIcon('Cpu');
+const BadgeDollarSign = makeLucideIcon('BadgeDollarSign');
+const Users = makeLucideIcon('Users');
+const Sparkles = makeLucideIcon('Sparkles');
+const Award = makeLucideIcon('Award');
+const Film = makeLucideIcon('Film');
+const Tv = makeLucideIcon('Tv');
+const Compass = makeLucideIcon('Compass');
+const Lock = makeLucideIcon('Lock');
+const LogOut = makeLucideIcon('LogOut');
+const Edit3 = makeLucideIcon('Edit3');
+const Trash2 = makeLucideIcon('Trash2');
+const Upload = makeLucideIcon('Upload');
+const ArrowUp = makeLucideIcon('ArrowUp');
+const ArrowDown = makeLucideIcon('ArrowDown');
+const Eye = makeLucideIcon('Eye');
+const CheckCircle2 = makeLucideIcon('CheckCircle2');
+const AlertCircle = makeLucideIcon('AlertCircle');
+const Instagram = makeLucideIcon('Instagram');
+const Facebook = makeLucideIcon('Facebook');
+const Youtube = makeLucideIcon('Youtube');
+const Globe = makeLucideIcon('Globe');
+const Layers = makeLucideIcon('Layers');
+const Volume2 = makeLucideIcon('Volume2');
+const MonitorPlay = makeLucideIcon('MonitorPlay');
+const RotateCcw = makeLucideIcon('RotateCcw');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -4174,18 +4264,18 @@ class ErrorBoundary extends React.Component {
   }
   render() {
     if (this.state.error) {
-      return /*#__PURE__*/React.createElement('div', {
+      return React.createElement('div', {
         style: {
           padding: '40px',
           color: '#fff',
           background: '#151819',
           fontFamily: 'sans-serif'
         }
-      }, /*#__PURE__*/React.createElement('h2', {
+      }, React.createElement('h2', {
         style: {
           color: '#ba8a40'
         }
-      }, 'Application Error'), /*#__PURE__*/React.createElement('pre', {
+      }, 'Application Error'), React.createElement('pre', {
         style: {
           whiteSpace: 'pre-wrap',
           color: '#f87171'
@@ -4197,7 +4287,7 @@ class ErrorBoundary extends React.Component {
 }
 const rootEl = document.getElementById("root");
 if (rootEl) {
-  createRoot(rootEl).render( /*#__PURE__*/React.createElement(ErrorBoundary, null, /*#__PURE__*/React.createElement(App)));
+  createRoot(rootEl).render(React.createElement(ErrorBoundary, null, React.createElement(App)));
 }
     </script>
   </body>
