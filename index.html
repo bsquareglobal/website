@@ -11,11 +11,7 @@
     <script crossorigin src="https://cdn.jsdelivr.net/npm/lucide@0.454.0/dist/umd/lucide.min.js"></script>
   </head>
   <body class="bg-[#151819] text-white antialiased">
-    <div id="root">
-      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#151819;color:#ba8a40;font-family:sans-serif;font-weight:700;letter-spacing:0.15em;">
-        LOADING BSQUARE GLOBAL...
-      </div>
-    </div>
+    <div id="root"></div>
     <script>
 const {
   useState,
@@ -35,31 +31,19 @@ function makeLucideIcon(iconName) {
       ...rest
     } = props || {};
     const lib = typeof window !== 'undefined' && window.lucide ? window.lucide : {};
-    const iconData = lib.icons && lib.icons[iconName] || lib[iconName];
-    if (!Array.isArray(iconData)) {
-      return React.createElement('svg', {
-        xmlns: 'http://www.w3.org/2000/svg',
-        width: size,
-        height: size,
-        viewBox: '0 0 24 24',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-        className,
-        ...rest
-      });
-    }
-    const children = iconData.map((node, idx) => {
-      if (Array.isArray(node) && node.length >= 2) {
-        return React.createElement(node[0], {
-          key: idx,
-          ...node[1]
-        });
+    const raw = lib.icons && lib.icons[iconName] || lib[iconName];
+    let nodes = [];
+    if (Array.isArray(raw)) {
+      if (typeof raw[0] === 'string' && Array.isArray(raw[2])) {
+        nodes = raw[2];
+      } else {
+        nodes = raw;
       }
-      return null;
-    });
+    }
+    const children = nodes.filter(node => Array.isArray(node) && typeof node[0] === 'string' && node[1] && typeof node[1] === 'object').map((node, idx) => React.createElement(node[0], {
+      key: idx,
+      ...node[1]
+    }));
     return React.createElement('svg', {
       xmlns: 'http://www.w3.org/2000/svg',
       width: size,
@@ -4250,44 +4234,9 @@ function App() {
     className: "w-4 h-4"
   }))))));
 }
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      error: null
-    };
-  }
-  static getDerivedStateFromError(error) {
-    return {
-      error
-    };
-  }
-  render() {
-    if (this.state.error) {
-      return React.createElement('div', {
-        style: {
-          padding: '40px',
-          color: '#fff',
-          background: '#151819',
-          fontFamily: 'sans-serif'
-        }
-      }, React.createElement('h2', {
-        style: {
-          color: '#ba8a40'
-        }
-      }, 'Application Error'), React.createElement('pre', {
-        style: {
-          whiteSpace: 'pre-wrap',
-          color: '#f87171'
-        }
-      }, String(this.state.error)));
-    }
-    return this.props.children;
-  }
-}
 const rootEl = document.getElementById("root");
 if (rootEl) {
-  createRoot(rootEl).render(React.createElement(ErrorBoundary, null, React.createElement(App)));
+  createRoot(rootEl).render(React.createElement(App));
 }
     </script>
   </body>
