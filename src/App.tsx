@@ -1135,23 +1135,6 @@ export default function App() {
     return () => clearInterval(timer);
   }, [currentPage, heroSlides.length]);
 
-  // Continuous smooth auto-scroll for 1:1 Instagram Reels carousel on Homepage
-  useEffect(() => {
-    if (currentPage !== 'home' || isReelsHovered || enabledReels.length === 0)
-      return;
-    const interval = setInterval(() => {
-      const el = reelsScrollRef.current;
-      if (!el) return;
-      const halfWidth = el.scrollWidth / 2;
-      if (el.scrollLeft >= halfWidth) {
-        el.scrollLeft = 0;
-      } else {
-        el.scrollLeft += 1;
-      }
-    }, 24);
-    return () => clearInterval(interval);
-  }, [currentPage, isReelsHovered, enabledReels.length]);
-
   // Ordered Gallery (Categories Removed)
   const sortedGallery = useMemo(() => {
     return [...gallery].sort((a, b) => a.order - b.order);
@@ -1271,6 +1254,23 @@ export default function App() {
   const enabledReels = useMemo(() => {
     return sortedReels.filter((r) => r.enabled);
   }, [sortedReels]);
+
+  // Continuous smooth auto-scroll for 1:1 Instagram Reels carousel on Homepage
+  useEffect(() => {
+    if (currentPage !== 'home' || isReelsHovered || enabledReels.length === 0)
+      return;
+    const interval = setInterval(() => {
+      const el = reelsScrollRef.current;
+      if (!el) return;
+      const halfWidth = el.scrollWidth / 2;
+      if (el.scrollLeft >= halfWidth) {
+        el.scrollLeft = 0;
+      } else {
+        el.scrollLeft += 1;
+      }
+    }, 24);
+    return () => clearInterval(interval);
+  }, [currentPage, isReelsHovered, enabledReels.length]);
 
   // Auto-retrieve Instagram Reel thumbnail where technically supported
   const autoFetchReelThumbnail = async (url: string) => {
