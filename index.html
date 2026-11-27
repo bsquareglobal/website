@@ -5,10 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BSquare Global | Smart Theatre, Home Theatre & 3D Theatre — India & UAE</title>
     <meta name="description" content="BSquare Global delivers turnkey Smart Theatre, Home Theatre, and 3D Theatre solutions across India and the UAE." />
+    <script>
+      window.BSQUARE_FIREBASE_CONFIG = {
+        apiKey: "AIzaSyAu8fSf3LsrLiVTHbA7AGLQUymO2_u6Kc8",
+        authDomain: "bsquare-global.firebaseapp.com",
+        projectId: "bsquare-global",
+        storageBucket: "bsquare-global.firebasestorage.app",
+        messagingSenderId: "601681687279",
+        appId: "1:601681687279:web:fe4231ef08496b67a1e11a"
+      };
+    </script>
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
     <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
     <script crossorigin src="https://cdn.jsdelivr.net/npm/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   </head>
   <body class="bg-[#151819] text-white antialiased">
     <div id="root"></div>
@@ -733,9 +746,174 @@ function App() {
 
   // Admin Dashboard States
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [adminUserEmail, setAdminUserEmail] = useState('');
   const [adminEmailInput, setAdminEmailInput] = useState('');
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [adminLoginError, setAdminLoginError] = useState('');
+  const [adminAuthLoading, setAdminAuthLoading] = useState(false);
+  const [firebaseLoaded, setFirebaseLoaded] = useState(false);
+  const [firebaseSyncStatus, setFirebaseSyncStatus] = useState('');
+
+  // Google Firebase Initialization (Authentication + Cloud Firestore)
+  const getFirebaseServices = () => {
+    const win = window;
+    const cfg = win.BSQUARE_FIREBASE_CONFIG;
+    if (!cfg || !cfg.apiKey || !cfg.projectId) return null;
+    if (!win.firebase || typeof win.firebase.initializeApp !== 'function') return null;
+    if (!win.firebase.apps || win.firebase.apps.length === 0) {
+      win.firebase.initializeApp(cfg);
+    }
+    return {
+      auth: win.firebase.auth ? win.firebase.auth() : null,
+      db: win.firebase.firestore ? win.firebase.firestore() : null
+    };
+  };
+
+  // Save a CMS document to Cloud Firestore when Admin is authenticated
+  const saveCmsDocToFirebase = (docId, value) => {
+    if (!isAdminAuthenticated || !firebaseLoaded) return;
+    const svc = getFirebaseServices();
+    if (!svc || !svc.db) return;
+    svc.db.collection('bsquare_cms').doc(docId).set({
+      value,
+      updatedAt: Date.now()
+    }).then(() => {
+      setFirebaseSyncStatus('Saved to Firebase');
+    }).catch(err => {
+      setFirebaseSyncStatus(`Sync error: ${err?.message || 'Check Firestore Rules'}`);
+    });
+  };
+
+  // Load latest saved website data from Cloud Firestore on startup + listen for Firebase Auth session
+  useEffect(() => {
+    const svc = getFirebaseServices();
+    if (!svc) {
+      setFirebaseLoaded(true);
+      return;
+    }
+    let unsubAuth = null;
+    if (svc.auth) {
+      unsubAuth = svc.auth.onAuthStateChanged(user => {
+        if (user) {
+          setIsAdminAuthenticated(true);
+          setAdminUserEmail(user.email || '');
+          // Load enquiries from Firestore once authenticated as Admin
+          if (svc.db) {
+            svc.db.collection('enquiries').get().then(snap => {
+              const list = [];
+              snap.forEach(doc => {
+                const d = doc.data();
+                if (d && d.id) list.push(d);
+              });
+              if (list.length > 0) {
+                list.sort((a, b) => b.id > a.id ? 1 : -1);
+                setEnquiries(list);
+              }
+            }).catch(() => {});
+          }
+        } else {
+          setIsAdminAuthenticated(false);
+          setAdminUserEmail('');
+        }
+      });
+    }
+    if (svc.db) {
+      svc.db.collection('bsquare_cms').get().then(snap => {
+        snap.forEach(doc => {
+          const payload = doc.data()?.value;
+          if (!payload) return;
+          if (doc.id === 'siteContent') setSiteContent(prev => ({
+            ...prev,
+            ...payload
+          }));
+          if (doc.id === 'services' && Array.isArray(payload)) setServices(payload);
+          if (doc.id === 'packages' && Array.isArray(payload)) setPackages(payload);
+          if (doc.id === 'projects' && Array.isArray(payload)) setProjects(payload);
+          if (doc.id === 'gallery' && Array.isArray(payload)) setGallery(payload);
+          if (doc.id === 'appearance') {
+            setAppearance(prev => ({
+              ...prev,
+              ...payload
+            }));
+            setDraftAppearance(prev => ({
+              ...prev,
+              ...payload
+            }));
+          }
+          if (doc.id === 'reels' && Array.isArray(payload)) setReels(payload);
+        });
+        setFirebaseLoaded(true);
+      }).catch(() => {
+        setFirebaseLoaded(true);
+      });
+    } else {
+      setFirebaseLoaded(true);
+    }
+    return () => {
+      if (typeof unsubAuth === 'function') unsubAuth();
+    };
+  }, []);
+
+  // Auto-sync CMS changes to Cloud Firestore when Admin edits content
+  useEffect(() => {
+    saveCmsDocToFirebase('siteContent', siteContent);
+  }, [siteContent, isAdminAuthenticated, firebaseLoaded]);
+  useEffect(() => {
+    saveCmsDocToFirebase('services', services);
+  }, [services, isAdminAuthenticated, firebaseLoaded]);
+  useEffect(() => {
+    saveCmsDocToFirebase('packages', packages);
+  }, [packages, isAdminAuthenticated, firebaseLoaded]);
+  useEffect(() => {
+    saveCmsDocToFirebase('projects', projects);
+  }, [projects, isAdminAuthenticated, firebaseLoaded]);
+  useEffect(() => {
+    saveCmsDocToFirebase('gallery', gallery);
+  }, [gallery, isAdminAuthenticated, firebaseLoaded]);
+  useEffect(() => {
+    saveCmsDocToFirebase('appearance', appearance);
+  }, [appearance, isAdminAuthenticated, firebaseLoaded]);
+  useEffect(() => {
+    saveCmsDocToFirebase('reels', reels);
+  }, [reels, isAdminAuthenticated, firebaseLoaded]);
+  const handleFirebaseLogin = async e => {
+    e.preventDefault();
+    setAdminLoginError('');
+    const email = adminEmailInput.trim();
+    const password = adminPasswordInput;
+    if (!email || !password) {
+      setAdminLoginError('Please enter both your Admin Email ID and Password.');
+      return;
+    }
+    const svc = getFirebaseServices();
+    if (!svc || !svc.auth) {
+      setAdminLoginError('Firebase Authentication is not available in this preview environment. Open your deployed site to sign in with Firebase.');
+      return;
+    }
+    setAdminAuthLoading(true);
+    try {
+      const cred = await svc.auth.signInWithEmailAndPassword(email, password);
+      if (cred?.user) {
+        setIsAdminAuthenticated(true);
+        setAdminUserEmail(cred.user.email || email);
+        setAdminPasswordInput('');
+      }
+    } catch (err) {
+      setAdminLoginError(err?.message || 'Invalid email or password.');
+    } finally {
+      setAdminAuthLoading(false);
+    }
+  };
+  const handleFirebaseLogout = async () => {
+    const svc = getFirebaseServices();
+    if (svc && svc.auth) {
+      try {
+        await svc.auth.signOut();
+      } catch {}
+    }
+    setIsAdminAuthenticated(false);
+    setAdminUserEmail('');
+  };
   const [adminTab, setAdminTab] = useState('projects');
   const [adminToast, setAdminToast] = useState(null);
   const [editingProject, setEditingProject] = useState(null);
@@ -885,6 +1063,10 @@ function App() {
     };
     setEnquiries(prev => [newRecord, ...prev]);
     setSubmittedEnquiry(newRecord);
+    const svc = getFirebaseServices();
+    if (svc && svc.db) {
+      svc.db.collection('enquiries').doc(newRecord.id).set(newRecord).catch(() => {});
+    }
   };
   const activeCompanyName = siteContent.companyName?.trim() || 'BSquare Global';
   const activeLogo = siteContent.companyLogo?.trim() || BSQUARE_IMAGES.logo;
@@ -2479,52 +2661,37 @@ function App() {
   }, /*#__PURE__*/React.createElement(AlertCircle, {
     className: "w-4 h-4 shrink-0"
   }), /*#__PURE__*/React.createElement("span", null, adminLoginError)), /*#__PURE__*/React.createElement("form", {
-    onSubmit: e => {
-      e.preventDefault();
-      if (adminEmailInput.trim().toLowerCase() === 'admin@bsquareglobal.com' && adminPasswordInput === 'BSquare@2025') {
-        setIsAdminAuthenticated(true);
-        setAdminLoginError('');
-      } else {
-        setAdminLoginError('Invalid credentials. Use the Quick-Fill Demo Admin button below.');
-      }
-    },
+    onSubmit: handleFirebaseLogin,
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-bold uppercase tracking-wider text-[#A1A1A1] mb-1.5"
-  }, "Admin Email"), /*#__PURE__*/React.createElement("input", {
+  }, "Admin Email ID"), /*#__PURE__*/React.createElement("input", {
     type: "email",
+    required: true,
+    autoComplete: "email",
     value: adminEmailInput,
     onChange: e => setAdminEmailInput(e.target.value),
-    placeholder: "admin@bsquareglobal.com",
+    placeholder: "Enter your Firebase admin email",
     className: "w-full px-4 py-3 rounded-xl bg-[#151819] border border-[#2A2E30] text-white text-sm outline-none focus:border-[#ba8a40]"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-bold uppercase tracking-wider text-[#A1A1A1] mb-1.5"
   }, "Password"), /*#__PURE__*/React.createElement("input", {
     type: "password",
+    required: true,
+    autoComplete: "current-password",
     value: adminPasswordInput,
     onChange: e => setAdminPasswordInput(e.target.value),
     placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
     className: "w-full px-4 py-3 rounded-xl bg-[#151819] border border-[#2A2E30] text-white text-sm outline-none focus:border-[#ba8a40]"
   })), /*#__PURE__*/React.createElement("button", {
     type: "submit",
-    className: "w-full py-3.5 rounded-full bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase tracking-wider"
-  }, "Sign In to Dashboard")), /*#__PURE__*/React.createElement("div", {
-    className: "pt-4 border-t border-[#2A2E30] space-y-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-[#A1A1A1]"
-  }, "Demo Admin Access: ", /*#__PURE__*/React.createElement("code", {
-    className: "text-[#ba8a40]"
-  }, "admin@bsquareglobal.com"), " / ", /*#__PURE__*/React.createElement("code", {
-    className: "text-[#ba8a40]"
-  }, "BSquare@2025")), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => {
-      setAdminEmailInput('admin@bsquareglobal.com');
-      setAdminPasswordInput('BSquare@2025');
-      setIsAdminAuthenticated(true);
-    },
-    className: "w-full py-2.5 rounded-xl bg-[#151819] hover:bg-[#222628] border border-[#ba8a40]/40 text-xs font-bold text-[#ba8a40] transition-colors"
-  }, "One-Click Demo Admin Login"))) : /*#__PURE__*/React.createElement("div", {
+    disabled: adminAuthLoading,
+    className: "w-full py-3.5 rounded-full bg-[#ba8a40] text-[#111314] font-obry-display text-xs font-extrabold uppercase tracking-wider disabled:opacity-60"
+  }, adminAuthLoading ? 'Signing In...' : 'Sign In with Email')), /*#__PURE__*/React.createElement("div", {
+    className: "pt-3 border-t border-[#2A2E30] text-[11px] text-[#A1A1A1] leading-relaxed"
+  }, "Secured by ", /*#__PURE__*/React.createElement("span", {
+    className: "text-[#ba8a40] font-semibold"
+  }, "Google Firebase Email Authentication"), ". Sign in using the Admin Email ID and Password created in your Firebase project.")) : /*#__PURE__*/React.createElement("div", {
     className: "space-y-8"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap items-center justify-between gap-4 p-6 rounded-2xl bg-[#191C1D] border border-[#2A2E30]"
@@ -2547,9 +2714,13 @@ function App() {
     className: "inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#151819] border border-[#2A2E30] hover:border-[#ba8a40] text-xs font-bold text-[#A1A1A1] hover:text-white"
   }, /*#__PURE__*/React.createElement(RotateCcw, {
     className: "w-3.5 h-3.5"
-  }), /*#__PURE__*/React.createElement("span", null, "Reset Defaults")), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("span", null, "Reset Defaults")), firebaseSyncStatus && /*#__PURE__*/React.createElement("span", {
+    className: "hidden md:inline-block px-3 py-1.5 rounded-full bg-[#151819] border border-[#2A2E30] text-[11px] text-emerald-400 font-semibold"
+  }, firebaseSyncStatus), adminUserEmail && /*#__PURE__*/React.createElement("span", {
+    className: "hidden sm:inline-block px-3 py-1.5 rounded-full bg-[#151819] border border-[#2A2E30] text-xs text-[#ba8a40]"
+  }, adminUserEmail), /*#__PURE__*/React.createElement("button", {
     type: "button",
-    onClick: () => setIsAdminAuthenticated(false),
+    onClick: handleFirebaseLogout,
     className: "inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-red-500/15 border border-red-500/40 text-xs font-bold text-red-300"
   }, /*#__PURE__*/React.createElement(LogOut, {
     className: "w-3.5 h-3.5"
